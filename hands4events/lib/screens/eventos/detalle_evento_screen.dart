@@ -43,17 +43,6 @@ class DetalleEventoScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Título del evento
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: AppTheme.fondoPrincipal,
-              child: Text(
-                tituloEvento,
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-            ),
 
             const SizedBox(height: 16),
 

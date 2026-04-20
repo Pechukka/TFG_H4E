@@ -15,10 +15,10 @@ class CustomBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 72,
-      decoration: BoxDecoration(
+      height: 80,
+      decoration: const BoxDecoration(
         color: AppTheme.fondoInput,
-        border: const Border(
+        border: Border(
           top: BorderSide(color: AppTheme.bordeCard, width: 1),
         ),
       ),

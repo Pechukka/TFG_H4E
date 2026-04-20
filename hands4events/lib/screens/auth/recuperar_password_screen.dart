@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_bar_custom.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
 
@@ -48,21 +49,10 @@ class _RecuperarPasswordScreenState extends State<RecuperarPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
-      appBar: AppBar(
-        backgroundColor: AppTheme.fondoInput,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.textoBlanco),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'RECUPERAR CONTRASEÑA',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: AppTheme.textoTerciario,
-            letterSpacing: 1.2,
-          ),
-        ),
-        centerTitle: false,
+      appBar: const AppBarCustom(
+        showLogo: false,
+        showBackButton: true,
+        title: 'Recuperar contraseña',
       ),
       body: SafeArea(
         child: SingleChildScrollView(

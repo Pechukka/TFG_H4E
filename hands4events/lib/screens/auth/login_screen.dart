@@ -67,23 +67,26 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   
-                  // Header con etiqueta
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.fondoCard,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'INICIO DE SESIÓN',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.textoTerciario,
-                        letterSpacing: 1.2,
+                  // Header con etiqueta (estilo Figma - más pequeño y centrado)
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.fondoInput,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'INICIO DE SESIÓN',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.textoTerciario,
+                          letterSpacing: 1.5,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ),

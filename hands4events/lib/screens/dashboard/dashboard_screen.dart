@@ -13,25 +13,13 @@ class DashboardScreen extends StatelessWidget {
       appBar: const AppBarCustom(
         showLogo: true,
         showBackButton: false,
+        title: 'Escritorio',
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header "Escritorio"
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              color: AppTheme.fondoPrincipal,
-              child: Center(
-                child: Text(
-                  'Escritorio',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Sección Próximos eventos
             Padding(

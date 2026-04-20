@@ -14,23 +14,11 @@ class EventosScreen extends StatelessWidget {
       appBar: const AppBarCustom(
         showLogo: true,
         showBackButton: false,
+        title: 'Eventos',
       ),
       body: Column(
         children: [
-          // Header "Eventos"
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            color: AppTheme.fondoPrincipal,
-            child: Center(
-              child: Text(
-                'Eventos',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Lista de eventos
           Expanded(

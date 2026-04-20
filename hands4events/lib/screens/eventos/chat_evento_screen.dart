@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_bar_custom.dart';
+import 'equipo_evento_screen.dart';
 
 /// Pantalla de chat del evento
 /// Permite comunicación en tiempo real entre trabajadores del evento
@@ -32,31 +33,24 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       appBar: AppBarCustom(
-        showLogo: false,
+        showLogo: true,
         showBackButton: true,
         title: widget.tituloEvento,
+        subtitle: 'Chat del evento',
       ),
       body: Column(
         children: [
-          // Subtítulo
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            color: AppTheme.fondoInput,
-            child: Text(
-              'Chat del evento',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textoTerciario,
-              ),
-            ),
-          ),
-
           // Banner info del equipo
           InkWell(
             onTap: () {
-              // TODO: Navegar a pantalla de equipo
-              print('Ver equipo del evento');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EquipoEventoScreen(
+                    tituloEvento: widget.tituloEvento,
+                  ),
+                ),
+              );
             },
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -67,7 +61,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.group,
                     color: AppTheme.verdeNeon,
                     size: 24,
@@ -84,9 +78,10 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                         const SizedBox(height: 2),
                         Text(
                           'Ver miembros del equipo',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textoSecundario,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.textoSecundario,
+                                  ),
                         ),
                       ],
                     ),
@@ -110,7 +105,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                 _buildMessageBubble(
                   context,
                   nombre: 'Carlos Martínez',
-                  mensaje: 'Recordad llevar chaleco reflectante y calzado cómodo',
+                  mensaje:
+                      'Recordad llevar chaleco reflectante y calzado cómodo',
                   hora: '14:30',
                   esPropio: false,
                   avatar: 'CM',
@@ -167,7 +163,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                 children: [
                   // Botón cámara
                   IconButton(
-                    icon: const Icon(Icons.camera_alt, color: AppTheme.textoSecundario),
+                    icon: const Icon(Icons.camera_alt,
+                        color: AppTheme.textoSecundario),
                     onPressed: () {
                       print('Abrir cámara');
                     },
@@ -175,7 +172,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
 
                   // Botón galería
                   IconButton(
-                    icon: const Icon(Icons.image, color: AppTheme.textoSecundario),
+                    icon: const Icon(Icons.image,
+                        color: AppTheme.textoSecundario),
                     onPressed: () {
                       print('Abrir galería');
                     },
@@ -190,7 +188,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                       style: const TextStyle(color: AppTheme.textoBlanco),
                       decoration: InputDecoration(
                         hintText: 'Escribe un mensaje...',
-                        hintStyle: const TextStyle(color: AppTheme.textoTerciario),
+                        hintStyle:
+                            const TextStyle(color: AppTheme.textoTerciario),
                         filled: true,
                         fillColor: AppTheme.fondoCard,
                         border: OutlineInputBorder(
@@ -214,7 +213,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: AppTheme.textoSobreVerde),
+                      icon: const Icon(Icons.send,
+                          color: AppTheme.textoSobreVerde),
                       onPressed: () {
                         if (_messageController.text.isNotEmpty) {
                           print('Enviar: ${_messageController.text}');
@@ -232,7 +232,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
     );
   }
 
-  Widget _buildMessageBubble(BuildContext context, {
+  Widget _buildMessageBubble(
+    BuildContext context, {
     String? nombre,
     required String mensaje,
     required String hora,
@@ -240,7 +241,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
     String? avatar,
   }) {
     return Row(
-      mainAxisAlignment: esPropio ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment:
+          esPropio ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Avatar (solo para mensajes de otros)
@@ -256,9 +258,9 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
               child: Text(
                 avatar ?? '',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.verdeNeon,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: AppTheme.verdeNeon,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ),
           ),
@@ -281,9 +283,9 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                   Text(
                     nombre,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.verdeNeon,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: AppTheme.verdeNeon,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 4),
                 ],
@@ -292,8 +294,10 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                 Text(
                   mensaje,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: esPropio ? AppTheme.textoSobreVerde : AppTheme.textoBlanco,
-                  ),
+                        color: esPropio
+                            ? AppTheme.textoSobreVerde
+                            : AppTheme.textoBlanco,
+                      ),
                 ),
 
                 const SizedBox(height: 4),
@@ -302,10 +306,10 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                 Text(
                   hora,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: esPropio 
-                        ? AppTheme.textoSobreVerde.withOpacity(0.6)
-                        : AppTheme.textoTerciario,
-                  ),
+                        color: esPropio
+                            ? AppTheme.textoSobreVerde.withOpacity(0.6)
+                            : AppTheme.textoTerciario,
+                      ),
                 ),
               ],
             ),
