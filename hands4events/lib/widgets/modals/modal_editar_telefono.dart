@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import 'modal_base.dart';
 
 /// Modal para editar número de teléfono
@@ -76,13 +76,13 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
                       LengthLimitingTextInputFormatter(9),
                       _PhoneNumberFormatter(),
                     ],
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: '612 345 678',
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         color: AppTheme.textoTerciario,
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
+                      contentPadding: EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 16,
                       ),

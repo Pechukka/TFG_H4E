@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import 'modal_base.dart';
 
 /// Modal para gestionar configuración de notificaciones

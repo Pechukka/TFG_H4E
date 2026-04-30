@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "340725366476",
+    "project_id": "hands4events-cd714",
+    "storage_bucket": "hands4events-cd714.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:340725366476:android:ca0f8f9c3ec629c727cc69",
+        "android_client_info": {
+          "package_name": "com.hands4event.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXJhsCR7OfJFdhfAtDZ3xpk1Pi-di2aa4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

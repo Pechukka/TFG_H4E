@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 
 /// Barra de navegación inferior de la app
 class CustomBottomNavBar extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hands4events/screens/eventos/chat_evento_screen.dart';
+import 'package:hands4events/core/theme.dart';
+import 'package:hands4events/screens/chat/chat_evento_screen.dart';
 import 'package:hands4events/screens/fichaje/fichaje_screen.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/outline_button.dart';

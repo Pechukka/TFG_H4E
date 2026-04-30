@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/modals/modal_disponibilidad.dart';
 

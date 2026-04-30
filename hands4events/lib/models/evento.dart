@@ -1,0 +1,77 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class Evento {
+  final String id;
+  final String titulo;
+  final DateTime fechaInicio;
+  final DateTime fechaFin;
+  final String ubicacion;
+  final String descripcion;
+  final double cobroPorHora;
+  final String rolAsignado;
+  final List<String> trabajadoresIds;
+
+  Evento({
+    required this.id,
+    required this.titulo,
+    required this.fechaInicio,
+    required this.fechaFin,
+    required this.ubicacion,
+    required this.descripcion,
+    required this.cobroPorHora,
+    required this.rolAsignado,
+    this.trabajadoresIds = const [],
+  });
+
+  // Getters
+  String get fechaFormateada {
+    return '${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}';
+  }
+
+  String get horaFormateada {
+    return '${_formatHora(fechaInicio)} - ${_formatHora(fechaFin)}';
+  }
+
+  String _formatHora(DateTime dt) {
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  int get duracionHoras {
+    return fechaFin.difference(fechaInicio).inHours;
+  }
+
+  bool estaEnCurso() {
+    final now = DateTime.now();
+    return now.isAfter(fechaInicio) && now.isBefore(fechaFin);
+  }
+
+  // Firebase → Dart
+  factory Evento.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Evento(
+      id: doc.id,
+      titulo: data['titulo'] ?? '',
+      fechaInicio: (data['fechaInicio'] as Timestamp).toDate(),
+      fechaFin: (data['fechaFin'] as Timestamp).toDate(),
+      ubicacion: data['ubicacion'] ?? '',
+      descripcion: data['descripcion'] ?? '',
+      cobroPorHora: (data['cobroPorHora'] ?? 0).toDouble(),
+      rolAsignado: data['rolAsignado'] ?? '',
+      trabajadoresIds: List<String>.from(data['trabajadoresIds'] ?? []),
+    );
+  }
+
+  // Dart → Firebase
+  Map<String, dynamic> toFirestore() {
+    return {
+      'titulo': titulo,
+      'fechaInicio': Timestamp.fromDate(fechaInicio),
+      'fechaFin': Timestamp.fromDate(fechaFin),
+      'ubicacion': ubicacion,
+      'descripcion': descripcion,
+      'cobroPorHora': cobroPorHora,
+      'rolAsignado': rolAsignado,
+      'trabajadoresIds': trabajadoresIds,
+    };
+  }
+}

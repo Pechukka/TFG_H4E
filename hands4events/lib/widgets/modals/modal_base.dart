@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 
 /// Modal base reutilizable con estructura común
 class ModalBase extends StatelessWidget {

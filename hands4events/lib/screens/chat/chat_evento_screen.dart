@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/app_bar_custom.dart';
 import 'equipo_evento_screen.dart';
 
@@ -86,7 +86,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                       ],
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     Icons.chevron_right,
                     color: AppTheme.textoSecundario,
                   ),
@@ -152,7 +152,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
           // Input de mensaje
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppTheme.fondoInput,
               border: Border(
                 top: BorderSide(color: AppTheme.bordeCampo, width: 1),
@@ -208,7 +208,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
 
                   // Botón enviar
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppTheme.verdeNeon,
                       shape: BoxShape.circle,
                     ),

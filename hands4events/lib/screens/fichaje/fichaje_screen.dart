@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/outline_button.dart';
@@ -21,7 +21,7 @@ class FichajeScreen extends StatefulWidget {
 }
 
 class _FichajeScreenState extends State<FichajeScreen> {
-  // Estados: 'no_iniciado', 'en_curso', 'pausado', 'finalizado'
+
   String _estado = 'no_iniciado';
   int _segundosTranscurridos = 0;
   String _tiempoFormateado = '00:00:00';
@@ -37,7 +37,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
   void _pausarFichaje() {
     setState(() {
       _estado = 'pausado';
-      _segundosTranscurridos = 10; // Simulación
+      _segundosTranscurridos = 10;
       _tiempoFormateado = '00:00:10';
     });
     print('Fichaje pausado');
@@ -46,7 +46,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
   void _reanudarFichaje() {
     setState(() {
       _estado = 'en_curso';
-      _segundosTranscurridos = 8; // Simulación
+      _segundosTranscurridos = 8;
       _tiempoFormateado = '00:00:08';
     });
     print('Fichaje reanudado');
@@ -55,7 +55,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
   void _finalizarFichaje() {
     setState(() {
       _estado = 'finalizado';
-      _segundosTranscurridos = 11; // Simulación
+      _segundosTranscurridos = 11;
       _tiempoFormateado = '00:00:11';
     });
     print('Fichaje finalizado');

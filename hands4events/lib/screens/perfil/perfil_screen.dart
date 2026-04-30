@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/modals/modal_editar_telefono.dart';
 import '../../widgets/modals/modal_editar_direccion.dart';

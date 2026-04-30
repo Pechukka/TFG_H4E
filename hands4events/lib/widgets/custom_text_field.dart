@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 
 /// Campo de texto personalizado Hands4Events
 /// Estilo: fondo verde oscuro, borde verde al focus

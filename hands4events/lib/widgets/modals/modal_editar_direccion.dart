@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/custom_text_field.dart';
 import 'modal_base.dart';
 
@@ -57,7 +57,7 @@ class _ModalEditarDireccionState extends State<ModalEditarDireccion> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.map,
                     size: 48,
                     color: AppTheme.textoTerciario,

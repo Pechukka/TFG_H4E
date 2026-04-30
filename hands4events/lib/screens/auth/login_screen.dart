@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../main_scaffold.dart';
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           activeColor: AppTheme.verdeNeon,
                           checkColor: AppTheme.textoSobreVerde,
-                          side: BorderSide(
+                          side: const BorderSide(
                             color: AppTheme.bordeCampo,
                             width: 1.5,
                           ),

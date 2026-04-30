@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import 'modal_base.dart';
 
 /// Modal para gestionar disponibilidad horaria
@@ -76,7 +76,7 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.calendar_today,
                   color: AppTheme.verdeNeon,
                   size: 20,
@@ -149,7 +149,7 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                               _formatearHora(_horaInicio),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
-                            Icon(
+                            const Icon(
                               Icons.access_time,
                               color: AppTheme.verdeNeon,
                               size: 20,
@@ -196,7 +196,7 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                               _formatearHora(_horaFin),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
-                            Icon(
+                            const Icon(
                               Icons.access_time,
                               color: AppTheme.verdeNeon,
                               size: 20,
@@ -276,7 +276,7 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.info_outline,
                   color: AppTheme.verdeNeon,
                   size: 20,

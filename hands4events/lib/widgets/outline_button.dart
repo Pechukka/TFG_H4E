@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 
 /// Botón con borde verde y fondo transparente
 /// Usado para acciones secundarias (Cancelar, Pausar, etc.)

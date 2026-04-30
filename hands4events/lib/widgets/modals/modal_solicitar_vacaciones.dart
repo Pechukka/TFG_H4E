@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import 'modal_base.dart';
 
 /// Modal para solicitar días de vacaciones
@@ -77,7 +77,7 @@ class _ModalSolicitarVacacionesState extends State<ModalSolicitarVacaciones> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   '15',
                   style: TextStyle(
                     fontSize: 48,

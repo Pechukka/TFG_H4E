@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 
 /// AppBar personalizado de Hands4Events
 class AppBarCustom extends StatelessWidget implements PreferredSizeWidget {

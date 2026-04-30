@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:hands4events/core/theme.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/modals/modal_solicitar_vacaciones.dart';
@@ -85,7 +85,7 @@ class NominasScreen extends StatelessWidget {
 
                   const SizedBox(height: 12),
 
-                  Text(
+                  const Text(
                     '15',
                     style: TextStyle(
                       fontSize: 64,
@@ -161,7 +161,7 @@ class NominasScreen extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppTheme.verdeNeon,
               shape: BoxShape.circle,
             ),
