@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase Core (OBLIGATORIO)
+  # Firebase Core
   firebase_core: ^3.6.0
   
   # Firebase Services
