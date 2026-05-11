@@ -1,15 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/eventos_provider.dart';
+import '../../models/evento.dart';
 import '../../widgets/app_bar_custom.dart';
 import 'detalle_evento_screen.dart';
 
 /// Pantalla Eventos
-/// Lista todos los eventos asignados al trabajador
-class EventosScreen extends StatelessWidget {
+/// Lista todos los eventos asignados al trabajador desde Firestore
+class EventosScreen extends StatefulWidget {
   const EventosScreen({super.key});
 
   @override
+  State<EventosScreen> createState() => _EventosScreenState();
+}
+
+class _EventosScreenState extends State<EventosScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userId = context.read<AuthProvider>().currentUserId;
+      if (userId != null) {
+        context.read<EventosProvider>().cargarEventos(userId);
+      }
+    });
+  }
+
+  String _formatearFecha(Evento evento) {
+    const meses = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+    final f = evento.fechaInicio;
+    final horaI = '${f.hour.toString().padLeft(2, '0')}:${f.minute.toString().padLeft(2, '0')}';
+    final horaF = '${evento.fechaFin.hour.toString().padLeft(2, '0')}:${evento.fechaFin.minute.toString().padLeft(2, '0')}';
+    return '${f.day} ${meses[f.month - 1]}, $horaI – $horaF';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final eventosProvider = context.watch<EventosProvider>();
+    final eventos = eventosProvider.eventos;
+
     return Scaffold(
       appBar: const AppBarCustom(
         showLogo: true,
@@ -20,55 +54,54 @@ class EventosScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 20),
 
-          // Lista de eventos
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _buildEventoCard(
-                  context,
-                  titulo: 'Festival de Música Summer Vibes',
-                  fecha: '28 Dic, 18:00 – 02:00',
-                  ubicacion: 'Recinto Ferial',
-                ),
-                const SizedBox(height: 12),
-                _buildEventoCard(
-                  context,
-                  titulo: 'Conferencia Tech Innovation',
-                  fecha: '30 Dic, 09:00 – 18:00',
-                  ubicacion: 'Centro de Convenciones',
-                ),
-                const SizedBox(height: 12),
-                _buildEventoCard(
-                  context,
-                  titulo: 'Concierto Año Nuevo',
-                  fecha: '31 Dic, 22:00 – 03:00',
-                  ubicacion: 'Plaza Mayor',
-                ),
-              ],
-            ),
+            child: eventosProvider.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.verdeNeon),
+                  )
+                : eventos.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.event_busy,
+                              size: 64,
+                              color: AppTheme.textoTerciario,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No tienes eventos asignados',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: AppTheme.textoSecundario),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: eventos.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final evento = eventos[index];
+                          return _buildEventoCard(context, evento);
+                        },
+                      ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEventoCard(
-    BuildContext context, {
-    required String titulo,
-    required String fecha,
-    required String ubicacion,
-  }) {
+  Widget _buildEventoCard(BuildContext context, Evento evento) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetalleEventoScreen(
-              tituloEvento: titulo,
-              fecha: fecha.split(',')[0], // Solo la fecha sin hora
-              ubicacion: ubicacion,
-            ),
+            builder: (context) => DetalleEventoScreen(evento: evento),
           ),
         );
       },
@@ -86,19 +119,19 @@ class EventosScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    titulo,
+                    evento.titulo,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    fecha,
+                    _formatearFecha(evento),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.verdeNeon,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    ubicacion,
+                    evento.ubicacion,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.textoSecundario,
                         ),

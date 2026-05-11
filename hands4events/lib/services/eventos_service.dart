@@ -7,16 +7,20 @@ import '../core/constants.dart';
 class EventosService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// OBTENER EVENTOS DE UN TRABAJADOR
+  /// OBTENER EVENTOS DE UN TRABAJADOR (stream en tiempo real)
   Stream<List<Evento>> getEventosTrabajador(String trabajadorId) {
     return _firestore
         .collection(AppConstants.colEventos)
         .where('trabajadoresIds', arrayContains: trabajadorId)
-        .orderBy('fechaInicio', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Evento.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final eventos = snapshot.docs
+              .map((doc) => Evento.fromFirestore(doc))
+              .toList();
+          // Ordenar por fechaInicio en Dart (evita índice compuesto en Firestore)
+          eventos.sort((a, b) => a.fechaInicio.compareTo(b.fechaInicio));
+          return eventos;
+        });
   }
 
   /// OBTENER UN EVENTO POR ID
@@ -34,19 +38,18 @@ class EventosService {
 
   /// OBTENER EVENTOS FUTUROS
   Future<List<Evento>> getEventosFuturos(String trabajadorId) async {
-    final now = Timestamp.now();
-    
     final snapshot = await _firestore
         .collection(AppConstants.colEventos)
         .where('trabajadoresIds', arrayContains: trabajadorId)
-        .where('fechaInicio', isGreaterThan: now)
-        .orderBy('fechaInicio', descending: false)
-        .limit(10)
         .get();
 
-    return snapshot.docs
+    final ahora = DateTime.now();
+    final eventos = snapshot.docs
         .map((doc) => Evento.fromFirestore(doc))
+        .where((e) => e.fechaInicio.isAfter(ahora))
         .toList();
+    eventos.sort((a, b) => a.fechaInicio.compareTo(b.fechaInicio));
+    return eventos.take(10).toList();
   }
 
   /// OBTENER EVENTOS POR FECHA

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
 import 'modal_base.dart';
 
 /// Modal para editar número de teléfono
@@ -12,14 +14,57 @@ class ModalEditarTelefono extends StatefulWidget {
 }
 
 class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
-  final TextEditingController _telefonoController = TextEditingController(
-    text: '612 345 678',
-  );
+  late final TextEditingController _telefonoController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-cargar el teléfono actual (sin el prefijo +34)
+    final usuario = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final telActual = usuario?.telefono?.replaceAll('+34', '').trim() ?? '';
+    _telefonoController = TextEditingController(text: telActual);
+  }
 
   @override
   void dispose() {
     _telefonoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final numero = _telefonoController.text.replaceAll(' ', '');
+    if (numero.length != 9) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Introduce 9 dígitos válidos'),
+          backgroundColor: AppTheme.rojoError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final exito = await authProvider.updateProfile(
+      telefono: '+34 $numero',
+    );
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(exito
+              ? 'Teléfono actualizado correctamente'
+              : 'Error al actualizar el teléfono'),
+          backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -34,7 +79,7 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 8),
-          
+
           // Campo con prefijo +34 fijo
           Container(
             decoration: BoxDecoration(
@@ -54,14 +99,14 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
                     ),
                   ),
                 ),
-                
+
                 // Separador
                 Container(
                   width: 1,
                   height: 24,
                   color: AppTheme.bordeCampo,
                 ),
-                
+
                 // Campo editable
                 Expanded(
                   child: TextField(
@@ -92,7 +137,7 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
           Text(
             'Este número se usará para contactarte en caso de emergencias o cambios de última hora en los eventos.',
@@ -107,15 +152,7 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Teléfono actualizado correctamente'),
-                  backgroundColor: AppTheme.verdeExito,
-                ),
-              );
-            },
+            onPressed: _isLoading ? null : _guardar,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.verdeNeon,
               foregroundColor: AppTheme.textoSobreVerde,
@@ -123,13 +160,22 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
-              'Guardar cambios',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.textoSobreVerde,
+                    ),
+                  )
+                : const Text(
+                    'Guardar cambios',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ],
@@ -145,11 +191,11 @@ class _PhoneNumberFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final text = newValue.text.replaceAll(' ', '');
-    
+
     if (text.isEmpty) {
       return newValue;
     }
-    
+
     String formatted = '';
     for (int i = 0; i < text.length; i++) {
       if (i == 3 || i == 6) {
@@ -157,7 +203,7 @@ class _PhoneNumberFormatter extends TextInputFormatter {
       }
       formatted += text[i];
     }
-    
+
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),

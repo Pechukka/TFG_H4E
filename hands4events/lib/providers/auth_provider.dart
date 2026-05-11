@@ -122,6 +122,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// VERIFICAR SI UN EMAIL EXISTE EN FIRESTORE
+  Future<bool> emailExisteEnFirestore(String email) async {
+    return await _authService.emailExisteEnFirestore(email);
+  }
+
   /// RECUPERAR CONTRASEÑA
   Future<bool> resetPassword(String email) async {
     _setLoading(true);

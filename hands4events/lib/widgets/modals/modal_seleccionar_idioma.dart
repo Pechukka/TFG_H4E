@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
 import 'modal_base.dart';
 
 /// Modal para seleccionar idioma
@@ -11,18 +13,44 @@ class ModalSeleccionarIdioma extends StatefulWidget {
 }
 
 class _ModalSeleccionarIdiomaState extends State<ModalSeleccionarIdioma> {
-  String _idiomaSeleccionado = 'Español';
+  late String _idiomaSeleccionado;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isLoading = false;
+
+  // Mapa código → nombre para mostrar
+  static const Map<String, String> _codigoANombre = {
+    'es': 'Español',
+    'en': 'English',
+    'fr': 'Français',
+    'de': 'Deutsch',
+    'it': 'Italiano',
+    'pt': 'Português',
+  };
 
   final List<Map<String, String>> _idiomas = [
-    {'nombre': 'Español', 'codigo': 'ES', 'bandera': '🇪🇸'},
-    {'nombre': 'English', 'codigo': 'EN', 'bandera': '🇬🇧'},
-    {'nombre': 'Français', 'codigo': 'FR', 'bandera': '🇫🇷'},
-    {'nombre': 'Deutsch', 'codigo': 'DE', 'bandera': '🇩🇪'},
-    {'nombre': 'Italiano', 'codigo': 'IT', 'bandera': '🇮🇹'},
-    {'nombre': 'Português', 'codigo': 'PT', 'bandera': '🇵🇹'},
+    {'nombre': 'Español', 'codigo': 'es', 'bandera': '🇪🇸'},
+    {'nombre': 'English', 'codigo': 'en', 'bandera': '🇬🇧'},
+    {'nombre': 'Français', 'codigo': 'fr', 'bandera': '🇫🇷'},
+    {'nombre': 'Deutsch', 'codigo': 'de', 'bandera': '🇩🇪'},
+    {'nombre': 'Italiano', 'codigo': 'it', 'bandera': '🇮🇹'},
+    {'nombre': 'Português', 'codigo': 'pt', 'bandera': '🇵🇹'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-seleccionar idioma actual del usuario
+    final codigoActual =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.idioma ?? 'es';
+    _idiomaSeleccionado = _codigoANombre[codigoActual] ?? 'Español';
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<Map<String, String>> get _idiomasFiltrados {
     if (_searchQuery.isEmpty) return _idiomas;
@@ -32,10 +60,32 @@ class _ModalSeleccionarIdiomaState extends State<ModalSeleccionarIdioma> {
         .toList();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _guardar() async {
+    // Obtener el código del idioma seleccionado
+    final entrada = _idiomas.firstWhere(
+      (i) => i['nombre'] == _idiomaSeleccionado,
+      orElse: () => {'codigo': 'es'},
+    );
+    final codigo = entrada['codigo']!;
+
+    setState(() => _isLoading = true);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final exito = await authProvider.updateProfile(idioma: codigo);
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(exito
+              ? 'Idioma cambiado a $_idiomaSeleccionado'
+              : 'Error al cambiar el idioma'),
+          backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -129,15 +179,7 @@ class _ModalSeleccionarIdiomaState extends State<ModalSeleccionarIdioma> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Idioma cambiado a $_idiomaSeleccionado'),
-                  backgroundColor: AppTheme.verdeExito,
-                ),
-              );
-            },
+            onPressed: _isLoading ? null : _guardar,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.verdeNeon,
               foregroundColor: AppTheme.textoSobreVerde,
@@ -145,13 +187,22 @@ class _ModalSeleccionarIdiomaState extends State<ModalSeleccionarIdioma> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
-              'Confirmar cambio',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.textoSobreVerde,
+                    ),
+                  )
+                : const Text(
+                    'Confirmar cambio',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ],

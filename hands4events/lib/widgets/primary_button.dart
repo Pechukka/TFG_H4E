@@ -5,7 +5,7 @@ import 'package:hands4events/core/theme.dart';
 /// Usado para acciones primarias (Iniciar sesión, Guardar, etc.)
 class PrimaryButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
   final double? width;
   final IconData? icon;
@@ -13,7 +13,7 @@ class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
     required this.text,
-    required this.onPressed,
+    this.onPressed,
     this.isLoading = false,
     this.width,
     this.icon,

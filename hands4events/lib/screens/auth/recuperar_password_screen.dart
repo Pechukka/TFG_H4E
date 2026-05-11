@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
@@ -24,25 +26,63 @@ class _RecuperarPasswordScreenState extends State<RecuperarPasswordScreen> {
     super.dispose();
   }
 
-  void _handleEnviarInstrucciones() {
+  Future<void> _handleEnviarInstrucciones() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _emailEnviado = true;
-          });
-          
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final email = _emailController.text.trim();
+
+      // Verificar primero si el email existe en nuestra base de datos
+      final existe = await authProvider.emailExisteEnFirestore(email);
+
+      if (mounted && !existe) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No existe ninguna cuenta con ese correo electrónico'),
+            backgroundColor: AppTheme.rojoError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      // Email existe → enviar instrucciones
+      final exito = await authProvider.resetPassword(email);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        if (exito) {
+          setState(() => _emailEnviado = true);
           Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) {
-              Navigator.pop(context);
-            }
+            if (mounted) Navigator.pop(context);
           });
+        } else {
+          final error = authProvider.errorMessage ?? 'Error al enviar correo';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_traducirError(error)),
+              backgroundColor: AppTheme.rojoError,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          authProvider.clearError();
         }
-      });
+      }
     }
+  }
+
+  String _traducirError(String error) {
+    if (error.contains('user-not-found') || error.contains('invalid-email')) {
+      return 'No existe una cuenta con ese correo';
+    } else if (error.contains('network-request-failed')) {
+      return 'Sin conexión a internet';
+    } else if (error.contains('too-many-requests')) {
+      return 'Demasiados intentos. Espera unos minutos';
+    }
+    return 'Error al enviar el correo. Inténtalo de nuevo';
   }
 
   @override
@@ -88,7 +128,7 @@ class _RecuperarPasswordScreenState extends State<RecuperarPasswordScreen> {
                   // Subtítulo
                   Text(
                     _emailEnviado
-                        ? 'Hemos enviado las instrucciones de recuperación a tu correo.\n\nRevisa tu bandeja de entrada.'
+                        ? 'Si el correo está registrado en nuestra plataforma, recibirás las instrucciones en tu bandeja de entrada.'
                         : 'Te enviaremos instrucciones para restablecer tu contraseña.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -52,18 +52,36 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+/// Wrapper que decide mostrar Login o MainScaffold
+/// El spinner SOLO aparece en el arranque inicial (initialize),
+/// NO durante login/logout → así LoginScreen permanece montado
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _inicializado = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Verificar sesión guardada al arrancar la app
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.initialize();
+      if (mounted) {
+        setState(() => _inicializado = true);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-
-    if (!authProvider.isAuthenticated) {
-      authProvider.initialize();
-    }
-
-    if (authProvider.isLoading) {
+    // Spinner solo mientras verifica sesión al arrancar
+    if (!_inicializado) {
       return const Scaffold(
         backgroundColor: Color(0xFF0A0F0A),
         body: Center(
@@ -74,8 +92,11 @@ class AuthWrapper extends StatelessWidget {
       );
     }
 
-    return authProvider.isAuthenticated 
-        ? const MainScaffold() 
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    // Una vez inicializado: MainScaffold o LoginScreen según sesión
+    return authProvider.isAuthenticated
+        ? const MainScaffold()
         : const LoginScreen();
   }
 }

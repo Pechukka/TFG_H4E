@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/modals/modal_editar_telefono.dart';
 import '../../widgets/modals/modal_editar_direccion.dart';
 import '../../widgets/modals/modal_seleccionar_idioma.dart';
 import '../../widgets/modals/modal_notificaciones.dart';
 import '../nominas/nominas_screen.dart';
-import '../auth/login_screen.dart';
 
 /// Pantalla de perfil del usuario
-/// Gestiona información personal, configuración y cierre de sesión
+/// Muestra datos reales del usuario autenticado desde AuthProvider
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
 
@@ -85,15 +86,12 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(),
-                ),
-                (route) => false,
-              );
+            onPressed: () async {
+              Navigator.pop(context); // cerrar diálogo
+              final authProvider =
+                  Provider.of<AuthProvider>(context, listen: false);
+              await authProvider.logout();
+              // AuthWrapper detecta isAuthenticated=false y navega al Login
             },
             child: const Text(
               'Cerrar sesión',
@@ -107,6 +105,16 @@ class PerfilScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Escuchamos AuthProvider para mostrar datos reales
+    final usuario = context.watch<AuthProvider>().currentUser;
+
+    // Valores a mostrar (con fallback si aún no cargó)
+    final iniciales = usuario?.iniciales ?? '??';
+    final nombre = usuario?.nombre ?? 'Usuario';
+    final email = usuario?.email ?? '';
+    final telefono = usuario?.telefono ?? 'No configurado';
+    final direccion = usuario?.direccion ?? 'No configurada';
+
     return Scaffold(
       appBar: const AppBarCustom(
         showLogo: true,
@@ -118,7 +126,7 @@ class PerfilScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            // Avatar y nombre
+            // Avatar con iniciales reales
             Column(
               children: [
                 Container(
@@ -128,10 +136,10 @@ class PerfilScreen extends StatelessWidget {
                     color: AppTheme.verdeNeon.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'JD',
-                      style: TextStyle(
+                      iniciales,
+                      style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.verdeNeon,
@@ -141,12 +149,12 @@ class PerfilScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'John Doe',
+                  nombre,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'john.doe@hands4events.com',
+                  email,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.textoSecundario,
                       ),
@@ -177,7 +185,7 @@ class PerfilScreen extends StatelessWidget {
               context,
               icono: Icons.phone,
               titulo: 'Teléfono',
-              valor: '+34 612 345 678',
+              valor: telefono,
               onTap: () => _mostrarModalTelefono(context),
             ),
 
@@ -185,7 +193,7 @@ class PerfilScreen extends StatelessWidget {
               context,
               icono: Icons.location_on,
               titulo: 'Dirección',
-              valor: 'Calle Mayor 123, 28013 Madrid',
+              valor: direccion,
               onTap: () => _mostrarModalDireccion(context),
             ),
 
@@ -212,7 +220,7 @@ class PerfilScreen extends StatelessWidget {
               context,
               icono: Icons.language,
               titulo: 'Idioma',
-              valor: 'Español',
+              valor: usuario?.idioma == 'es' ? 'Español' : (usuario?.idioma ?? 'Español'),
               onTap: () => _mostrarModalIdioma(context),
             ),
 

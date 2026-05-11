@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hands4events/core/theme.dart';
+import 'package:hands4events/models/evento.dart';
 import 'package:hands4events/screens/chat/chat_evento_screen.dart';
 import 'package:hands4events/screens/fichaje/fichaje_screen.dart';
 import '../../widgets/app_bar_custom.dart';
@@ -7,28 +8,31 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/outline_button.dart';
 
 /// Pantalla de detalle de un evento
-/// Muestra toda la información del evento y acciones disponibles
+/// Recibe el objeto Evento completo desde EventosScreen
 class DetalleEventoScreen extends StatelessWidget {
-  final String tituloEvento;
-  final String fecha;
-  final String hora;
-  final String ubicacion;
-  final String descripcion;
-  final String cobroPorHora;
-  final String rolAsignado;
-  final String tiempoEstimado;
+  final Evento evento;
 
-  const DetalleEventoScreen({
-    super.key,
-    this.tituloEvento = 'Festival de Música Summer Vibes',
-    this.fecha = '28 Diciembre 2024',
-    this.hora = '18:00 - 02:00',
-    this.ubicacion = 'Recinto Ferial, Av. Principal 123, Madrid',
-    this.descripcion = 'Concierto especial de Año Nuevo en la plaza principal de la ciudad. Se necesita personal para seguridad, atención al público y coordinación de emergencias.',
-    this.cobroPorHora = '20€/hora',
-    this.rolAsignado = 'Runner',
-    this.tiempoEstimado = '5 horas',
-  });
+  const DetalleEventoScreen({super.key, required this.evento});
+
+  String get _fecha {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    final f = evento.fechaInicio;
+    return '${f.day} de ${meses[f.month - 1]} de ${f.year}';
+  }
+
+  String get _hora {
+    String fmt(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${fmt(evento.fechaInicio)} - ${fmt(evento.fechaFin)}';
+  }
+
+  String get _tiempoEstimado {
+    final horas = evento.duracionHoras;
+    return horas == 1 ? '1 hora' : '$horas horas';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +41,7 @@ class DetalleEventoScreen extends StatelessWidget {
       appBar: AppBarCustom(
         showLogo: true,
         showBackButton: true,
-        title: tituloEvento,
+        title: evento.titulo,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -67,25 +71,22 @@ class DetalleEventoScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildInfoRow(
-                    context,
+                  _buildInfoRow(context,
                     icono: Icons.calendar_today,
                     titulo: 'Fecha',
-                    valor: fecha,
+                    valor: _fecha,
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow(
-                    context,
+                  _buildInfoRow(context,
                     icono: Icons.access_time,
                     titulo: 'Hora',
-                    valor: hora,
+                    valor: _hora,
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow(
-                    context,
+                  _buildInfoRow(context,
                     icono: Icons.location_on,
                     titulo: 'Ubicación',
-                    valor: ubicacion,
+                    valor: evento.ubicacion,
                   ),
                 ],
               ),
@@ -109,7 +110,9 @@ class DetalleEventoScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                descripcion,
+                evento.descripcion.isNotEmpty
+                    ? evento.descripcion
+                    : 'Sin descripción disponible.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   height: 1.6,
                 ),
@@ -139,25 +142,24 @@ class DetalleEventoScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildInfoRow(
-                    context,
+                  _buildInfoRow(context,
                     icono: Icons.attach_money,
                     titulo: 'Cobro por Hora',
-                    valor: cobroPorHora,
+                    valor: '${evento.cobroPorHora.toStringAsFixed(0)}€/hora',
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow(
-                    context,
+                  _buildInfoRow(context,
                     icono: Icons.work_outline,
                     titulo: 'Rol Asignado',
-                    valor: rolAsignado,
+                    valor: evento.rolAsignado.isNotEmpty
+                        ? evento.rolAsignado
+                        : 'Sin especificar',
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow(
-                    context,
+                  _buildInfoRow(context,
                     icono: Icons.schedule,
                     titulo: 'Tiempo Estimado',
-                    valor: tiempoEstimado,
+                    valor: _tiempoEstimado,
                   ),
                 ],
               ),
@@ -180,7 +182,8 @@ class DetalleEventoScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => ChatEventoScreen(
-                              tituloEvento: tituloEvento,
+                              tituloEvento: evento.titulo,
+                              eventoId: evento.id,
                             ),
                           ),
                         );
@@ -200,8 +203,9 @@ class DetalleEventoScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => FichajeScreen(
-                              tituloEvento: tituloEvento,
-                              fecha: fecha,
+                              tituloEvento: evento.titulo,
+                              fecha: _fecha,
+                              eventoId: evento.id,
                             ),
                           ),
                         );
@@ -227,11 +231,7 @@ class DetalleEventoScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icono,
-          color: AppTheme.verdeNeon,
-          size: 24,
-        ),
+        Icon(icono, color: AppTheme.verdeNeon, size: 24),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -244,10 +244,7 @@ class DetalleEventoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                valor,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text(valor, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ),

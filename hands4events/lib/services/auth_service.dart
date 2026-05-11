@@ -82,6 +82,7 @@ class AuthService {
   }
 
   /// OBTENER DATOS DEL USUARIO
+  /// Si no existe en Firestore (ej: creado desde Console), crea documento básico
   Future<User?> getUserData(String uid) async {
     try {
       final doc = await _firestore
@@ -91,6 +92,23 @@ class AuthService {
 
       if (doc.exists) {
         return User.fromFirestore(doc);
+      }
+
+      // Usuario existe en Auth pero no en Firestore → crear documento básico
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) {
+        final nuevoUsuario = User(
+          id: uid,
+          nombre: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
+          email: firebaseUser.email!,
+          rol: AppConstants.rolWorker,
+          createdAt: DateTime.now(),
+        );
+        await _firestore
+            .collection(AppConstants.colUsers)
+            .doc(uid)
+            .set(nuevoUsuario.toFirestore());
+        return nuevoUsuario;
       }
       return null;
     } catch (e) {
@@ -119,6 +137,20 @@ class AuthService {
         .collection(AppConstants.colUsers)
         .doc(currentUserId)
         .update(updates);
+  }
+
+  /// VERIFICAR SI UN EMAIL EXISTE EN FIRESTORE
+  Future<bool> emailExisteEnFirestore(String email) async {
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.colUsers)
+          .where('email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      return false; // En caso de error, permitimos continuar
+    }
   }
 
   /// RECUPERAR CONTRASEÑA

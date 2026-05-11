@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
-import '../main_scaffold.dart';
 import 'recuperar_password_screen.dart';
 
 /// Pantalla de inicio de sesión
@@ -28,21 +29,55 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainScaffold()),
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final exito = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        if (exito) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('¡Bienvenido! Iniciando sesión...'),
+              backgroundColor: AppTheme.verdeNeon.withOpacity(0.9),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
+          // AuthWrapper detecta isAuthenticated=true y navega a MainScaffold
+        } else {
+          final error = authProvider.errorMessage ?? 'Error al iniciar sesión';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_traducirError(error)),
+              backgroundColor: AppTheme.rojoError,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          authProvider.clearError();
         }
-      });
+      }
     }
+  }
+
+  /// Traduce errores de Firebase a mensajes legibles
+  String _traducirError(String error) {
+    if (error.contains('user-not-found') || error.contains('invalid-credential')) {
+      return 'Correo o contraseña incorrectos';
+    } else if (error.contains('wrong-password')) {
+      return 'Contraseña incorrecta';
+    } else if (error.contains('too-many-requests')) {
+      return 'Demasiados intentos. Espera unos minutos';
+    } else if (error.contains('network-request-failed')) {
+      return 'Sin conexión a internet';
+    }
+    return 'Error al iniciar sesión. Inténtalo de nuevo';
   }
 
   void _navigateToRecuperarPassword() {

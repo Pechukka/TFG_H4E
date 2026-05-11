@@ -1,9 +1,14 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/eventos_provider.dart';
+import '../../models/evento.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/modals/modal_disponibilidad.dart';
+import '../eventos/detalle_evento_screen.dart';
 
 /// Pantalla de calendario mensual
 /// Permite ver eventos asignados y gestionar disponibilidad horaria
@@ -17,23 +22,29 @@ class CalendarioScreen extends StatefulWidget {
 class _CalendarioScreenState extends State<CalendarioScreen> {
   DateTime _mesActual = DateTime.now();
   int? _diaSeleccionado;
+  List<Evento> _eventosDelDia = [];
 
-  // Mapa de días con eventos (simulación)
-  final Map<int, bool> _diasConEventos = {
-    5: true,
-    12: true,
-    18: true,
-    23: true,
-  };
+  // Disponibilidad sigue siendo local (FASE futura)
+  final Map<int, bool> _diasConDisponibilidad = {};
 
-  // Mapa de días con disponibilidad configurada (simulación)
-  final Map<int, bool> _diasConDisponibilidad = {
-    15: true,
-    16: true,
-    20: true,
-    25: true,
-    30: true,
-  };
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarMes();
+    });
+  }
+
+  void _cargarMes() {
+    final userId = context.read<AuthProvider>().currentUserId;
+    if (userId != null) {
+      context.read<EventosProvider>().cargarEventosDelMes(
+        userId,
+        _mesActual.year,
+        _mesActual.month,
+      );
+    }
+  }
 
   void _cambiarMes(int incremento) {
     setState(() {
@@ -42,13 +53,28 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         _mesActual.month + incremento,
       );
       _diaSeleccionado = null;
+      _eventosDelDia = [];
     });
+    _cargarMes();
   }
 
-  void _seleccionarDia(int dia) {
+  Future<void> _seleccionarDia(int dia) async {
     setState(() {
       _diaSeleccionado = dia;
+      _eventosDelDia = [];
     });
+
+    final userId = context.read<AuthProvider>().currentUserId;
+    if (userId == null) return;
+
+    final fecha = DateTime(_mesActual.year, _mesActual.month, dia);
+    final eventos = await context
+        .read<EventosProvider>()
+        .getEventosPorFecha(userId, fecha);
+
+    if (mounted) {
+      setState(() => _eventosDelDia = eventos);
+    }
   }
 
   String _getNombreMes() {
@@ -206,7 +232,9 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                         dia.year == hoy.year;
 
                     final estaSeleccionado = dia.day == _diaSeleccionado;
-                    final tieneEvento = _diasConEventos[dia.day] == true;
+                    // Días con eventos desde Firestore
+                    final eventosProvider = context.watch<EventosProvider>();
+                    final tieneEvento = eventosProvider.tieneEventoEnDia(dia.day);
                     final tieneDisponibilidad =
                         _diasConDisponibilidad[dia.day] == true;
 
@@ -328,60 +356,71 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
             const SizedBox(height: 12),
 
-            // Evento placeholder o mensaje vacío
-            if (_diasConEventos[_diaSeleccionado] == true)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.fondoCard,
+            // Eventos reales del día desde Firestore
+            if (_eventosDelDia.isNotEmpty)
+              ..._eventosDelDia.map((evento) {
+                final horaI = '${evento.fechaInicio.hour.toString().padLeft(2, '0')}:${evento.fechaInicio.minute.toString().padLeft(2, '0')}';
+                final horaF = '${evento.fechaFin.hour.toString().padLeft(2, '0')}:${evento.fechaFin.minute.toString().padLeft(2, '0')}';
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetalleEventoScreen(evento: evento),
+                      ),
+                    ),
                     borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppTheme.verdeNeon.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.event,
-                          color: AppTheme.verdeNeon,
-                          size: 20,
-                        ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.fondoCard,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Festival de Música',
-                              style: Theme.of(context).textTheme.titleSmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppTheme.verdeNeon.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '18:00 - 02:00',
-                              style:
-                                  Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.verdeNeon,
-                                      ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: const Icon(
+                              Icons.event,
+                              color: AppTheme.verdeNeon,
+                              size: 20,
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  evento.titulo,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$horaI - $horaF',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.verdeNeon,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppTheme.textoSecundario),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              )
+                );
+              })
             else
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

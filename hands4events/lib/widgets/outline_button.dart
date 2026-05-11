@@ -5,7 +5,7 @@ import 'package:hands4events/core/theme.dart';
 /// Usado para acciones secundarias (Cancelar, Pausar, etc.)
 class CustomOutlineButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
   final double? width;
   final IconData? icon;
@@ -15,7 +15,7 @@ class CustomOutlineButton extends StatelessWidget {
   const CustomOutlineButton({
     super.key,
     required this.text,
-    required this.onPressed,
+    this.onPressed,
     this.isLoading = false,
     this.width,
     this.icon,

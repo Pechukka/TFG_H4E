@@ -12,11 +12,15 @@ class ChatService {
     return _firestore
         .collection(AppConstants.colMensajes)
         .where('eventoId', isEqualTo: eventoId)
-        .orderBy('timestamp', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Mensaje.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final mensajes = snapshot.docs
+              .map((doc) => Mensaje.fromFirestore(doc))
+              .toList();
+          // Ordenar por timestamp en Dart (evita índice compuesto en Firestore)
+          mensajes.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          return mensajes;
+        });
   }
 
   /// ENVIAR MENSAJE
