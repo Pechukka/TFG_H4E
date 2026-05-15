@@ -3,11 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/eventos_provider.dart';
+import '../../providers/nominas_provider.dart';
+import '../../providers/notificaciones_provider.dart';
+import '../../providers/idioma_provider.dart';
 import '../../models/evento.dart';
+import '../../models/notificacion.dart';
 import '../../widgets/app_bar_custom.dart';
+import '../eventos/detalle_evento_screen.dart';
+import '../chat/chat_evento_screen.dart';
+import '../nominas/nominas_screen.dart';
+import '../perfil/perfil_screen.dart';
 
-/// Pantalla Dashboard (Escritorio)
-/// Muestra próximos eventos reales desde Firestore
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -19,43 +25,125 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar eventos al entrar en el dashboard
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userId = context.read<AuthProvider>().currentUserId;
       if (userId != null) {
         context.read<EventosProvider>().cargarEventos(userId);
+        context.read<NotificacionesProvider>().cargarNotificaciones(userId);
+        context.read<NominasProvider>().cargarNominas(userId);
       }
     });
   }
 
-  /// Formatea la fecha del evento para mostrarla como en el diseño original
-  String _formatearFechaEvento(Evento evento) {
-    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const meses = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-    ];
+  String _formatearFechaEvento(Evento evento, String idioma) {
+    const diasEs = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const diasEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const mesesEs = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const mesesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final dias = idioma == 'en' ? diasEn : diasEs;
+    final meses = idioma == 'en' ? mesesEn : mesesEs;
     final fecha = evento.fechaInicio;
-    final diaSemana = diasSemana[fecha.weekday - 1];
+    final diaSemana = dias[fecha.weekday - 1];
     final mes = meses[fecha.month - 1];
     final hora = '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
     return '$diaSemana ${fecha.day} $mes • $hora';
   }
 
+  void _navegarNotificacion(Notificacion notif) async {
+    await context.read<NotificacionesProvider>().marcarLeida(notif.id);
+
+    if (!mounted) return;
+
+    switch (notif.tipo) {
+      case TipoNotificacion.nuevoEvento:
+        final eventoId = notif.datos?['eventoId'];
+        if (eventoId != null) {
+          final evento = await context.read<EventosProvider>().fetchEvento(eventoId);
+          if (mounted && evento != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleEventoScreen(evento: evento),
+              ),
+            );
+          }
+        }
+        break;
+
+      case TipoNotificacion.nuevoMensaje:
+        final eventoId = notif.datos?['eventoId'];
+        final tituloEvento = notif.datos?['tituloEvento'] ?? 'Evento';
+        if (eventoId != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatEventoScreen(
+                tituloEvento: tituloEvento,
+                eventoId: eventoId,
+              ),
+            ),
+          );
+        }
+        break;
+
+      case TipoNotificacion.nominaPublicada:
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NominasScreen()),
+          );
+        }
+        break;
+
+      case TipoNotificacion.cambioEvento:
+        final eventoIdCambio = notif.datos?['eventoId'];
+        if (eventoIdCambio != null) {
+          final evento = await context.read<EventosProvider>().fetchEvento(eventoIdCambio);
+          if (mounted && evento != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleEventoScreen(evento: evento),
+              ),
+            );
+          }
+        }
+        break;
+
+      case TipoNotificacion.documentoRequerido:
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PerfilScreen()),
+          );
+        }
+        break;
+
+      case TipoNotificacion.sistema:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     final eventosProvider = context.watch<EventosProvider>();
+    final notificacionesProvider = context.watch<NotificacionesProvider>();
+    final nominasProvider = context.watch<NominasProvider>();
+
     final eventosFuturos = eventosProvider.eventosFuturos;
     final eventosEnCurso = eventosProvider.eventosEnCurso;
-
-    // Los que mostrar en dashboard: en curso primero, luego futuros (máx 5 en total)
-    final eventosAMostrar = [...eventosEnCurso, ...eventosFuturos].take(5).toList();
+    final eventosAMostrar =
+        [...eventosEnCurso, ...eventosFuturos].take(5).toList();
+    final notificaciones =
+        notificacionesProvider.notificaciones.take(5).toList();
+    final ultimaNomina = nominasProvider.ultimaNomina;
 
     return Scaffold(
-      appBar: const AppBarCustom(
+      appBar: AppBarCustom(
         showLogo: true,
         showBackButton: false,
-        title: 'Escritorio',
+        title: t.tr('escritorio'),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -63,18 +151,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const SizedBox(height: 20),
 
-            // Sección Próximos eventos
+            // Resumen última nómina
+            if (ultimaNomina != null)
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NominasScreen(),
+                  ),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.fondoCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.verdeNeon.withValues(alpha: 0.25),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppTheme.verdeNeon.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.description_outlined,
+                          color: AppTheme.verdeNeon,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t.tr('ultima_nomina'),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.textoSecundario,
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              ultimaNomina.nombreCompleto,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        ultimaNomina.sueldoNetoFormateado,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.verdeNeon,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Próximos eventos',
+                t.tr('proximos_eventos'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // Lista de eventos desde Firestore
             if (eventosProvider.isLoading)
               const Padding(
                 padding: EdgeInsets.all(32),
@@ -83,66 +235,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               )
             else if (eventosAMostrar.isEmpty)
-              _buildSinEventos(context)
+              _buildSinEventos(context, t)
             else
               ...eventosAMostrar.map(
                 (evento) => _buildEventoCard(
                   context,
+                  t: t,
                   titulo: evento.titulo,
-                  fecha: _formatearFechaEvento(evento),
+                  fecha: _formatearFechaEvento(evento, t.idioma),
                   enCurso: evento.estaEnCurso(),
                 ),
               ),
-
             const SizedBox(height: 32),
-
-            // Sección Notificaciones (diseño original mantenido)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Notificaciones',
+                t.tr('notificaciones'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // Subsección: SISTEMA
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'SISTEMA',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.textoTerciario,
-                  letterSpacing: 1.2,
+            if (notificacionesProvider.isLoading)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppTheme.verdeNeon),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Notificaciones dinámicas según eventos cargados
-            if (eventosEnCurso.isNotEmpty)
-              _buildNotificacionCard(
-                context,
-                icono: Icons.access_time,
-                texto: 'Tienes ${eventosEnCurso.length} evento${eventosEnCurso.length > 1 ? 's' : ''} en curso ahora mismo',
-              ),
-
-            if (eventosFuturos.isNotEmpty)
-              _buildNotificacionCard(
-                context,
-                icono: Icons.event_outlined,
-                texto: 'Tienes ${eventosFuturos.length} evento${eventosFuturos.length > 1 ? 's' : ''} próximo${eventosFuturos.length > 1 ? 's' : ''} asignado${eventosFuturos.length > 1 ? 's' : ''}',
-              ),
-
-            if (eventosAMostrar.isEmpty && !eventosProvider.isLoading)
-              _buildNotificacionCard(
-                context,
-                icono: Icons.check_circle_outline,
-                texto: 'No tienes eventos asignados por el momento',
-              ),
-
+              )
+            else if (notificaciones.isEmpty)
+              _buildSinNotificaciones(context, t)
+            else
+              ...notificaciones.map((notif) => _buildNotificacionCard(
+                    context,
+                    notificacion: notif,
+                    onTap: () => _navegarNotificacion(notif),
+                  )),
             const SizedBox(height: 24),
           ],
         ),
@@ -150,7 +277,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSinEventos(BuildContext context) {
+  Widget _buildSinEventos(BuildContext context, IdiomaProvider t) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(24),
@@ -160,10 +287,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Center(
         child: Text(
-          'No tienes eventos próximos asignados',
+          t.tr('sin_eventos'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.textoSecundario,
-          ),
+                color: AppTheme.textoSecundario,
+              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSinNotificaciones(BuildContext context, IdiomaProvider t) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.fondoCard,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          t.tr('sin_notificaciones'),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textoSecundario,
+              ),
         ),
       ),
     );
@@ -171,6 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildEventoCard(
     BuildContext context, {
+    required IdiomaProvider t,
     required String titulo,
     required String fecha,
     bool enCurso = false,
@@ -188,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.verdeNeon.withOpacity(0.1),
+              color: AppTheme.verdeNeon.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -210,28 +357,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   fecha,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.verdeNeon,
-                  ),
+                        color: AppTheme.verdeNeon,
+                      ),
                 ),
               ],
             ),
           ),
-          // Badge "En curso" si el evento está activo ahora
           if (enCurso)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.verdeNeon.withOpacity(0.15),
+                color: AppTheme.verdeNeon.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: AppTheme.verdeNeon, width: 1),
               ),
               child: Text(
-                'EN CURSO',
+                t.tr('en_curso'),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.verdeNeon,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: AppTheme.verdeNeon,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ),
         ],
@@ -241,31 +387,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildNotificacionCard(
     BuildContext context, {
-    required IconData icono,
-    required String texto,
+    required Notificacion notificacion,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.fondoCard,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icono,
-            color: AppTheme.verdeNeon,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              texto,
-              style: Theme.of(context).textTheme.bodyMedium,
+    IconData icono;
+    switch (notificacion.tipo) {
+      case TipoNotificacion.nuevoEvento:
+        icono = Icons.event;
+        break;
+      case TipoNotificacion.nuevoMensaje:
+        icono = Icons.chat_bubble;
+        break;
+      case TipoNotificacion.nominaPublicada:
+        icono = Icons.description;
+        break;
+      default:
+        icono = Icons.notifications;
+    }
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.fondoCard,
+          borderRadius: BorderRadius.circular(12),
+          border: notificacion.leida
+              ? null
+              : Border.all(
+                  color: AppTheme.verdeNeon.withValues(alpha: 0.3), width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icono,
+              color: AppTheme.verdeNeon,
+              size: 24,
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notificacion.titulo,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: notificacion.leida
+                              ? FontWeight.normal
+                              : FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notificacion.mensaje,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textoSecundario,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (!notificacion.leida)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppTheme.verdeNeon,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

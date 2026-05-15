@@ -31,7 +31,7 @@ class AppBarCustom extends StatelessWidget implements PreferredSizeWidget {
         color: headerColor,
         border: Border(
           bottom: BorderSide(
-            color: AppTheme.bordeCard.withOpacity(0.8),
+            color: AppTheme.bordeCard.withValues(alpha: 0.8),
             width: 1,
           ),
         ),

@@ -10,18 +10,24 @@ class FichajeProvider with ChangeNotifier {
   final FichajesService _fichajesService = FichajesService();
 
   Fichaje? _fichajeActivo;
+  List<Fichaje> _historial = [];
   Timer? _cronometro;
   bool _isLoading = false;
   String? _errorMessage;
 
   // Getters
   Fichaje? get fichajeActivo => _fichajeActivo;
+  List<Fichaje> get historial => _historial;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get tieneFichajeActivo => _fichajeActivo != null;
 
   /// CARGAR FICHAJE ACTIVO
   Future<void> cargarFichajeActivo(String trabajadorId, String eventoId) async {
+    // Limpiar estado del evento anterior antes de cargar el nuevo
+    _fichajeActivo = null;
+    _historial = [];
+    _detenerCronometro();
     _setLoading(true);
     _clearError();
 
@@ -53,7 +59,7 @@ class FichajeProvider with ChangeNotifier {
         ubicacion = await _fichajesService.obtenerUbicacion();
       } catch (e) {
         // Continuar sin GPS si falla
-        print('GPS no disponible: $e');
+        // GPS unavailable — continue without location
       }
 
       _fichajeActivo = await _fichajesService.ficharEntrada(
@@ -86,7 +92,7 @@ class FichajeProvider with ChangeNotifier {
       try {
         ubicacion = await _fichajesService.obtenerUbicacion();
       } catch (e) {
-        print('GPS no disponible: $e');
+        // GPS unavailable — continue without location
       }
 
       await _fichajesService.ficharSalida(
@@ -154,6 +160,14 @@ class FichajeProvider with ChangeNotifier {
     }
   }
 
+  /// CARGAR HISTORIAL DE FICHAJES FINALIZADOS
+  Future<void> cargarHistorial(String trabajadorId, String eventoId) async {
+    try {
+      _historial = await _fichajesService.getFichajesEvento(trabajadorId, eventoId);
+      notifyListeners();
+    } catch (_) {}
+  }
+
   /// CRONÓMETRO
   void _iniciarCronometro() {
     _detenerCronometro(); // Detener cronómetro anterior si existe
@@ -185,6 +199,15 @@ class FichajeProvider with ChangeNotifier {
 
   void clearError() {
     _clearError();
+    notifyListeners();
+  }
+
+  void reset() {
+    _detenerCronometro();
+    _fichajeActivo = null;
+    _historial = [];
+    _isLoading = false;
+    _errorMessage = null;
     notifyListeners();
   }
 

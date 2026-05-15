@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 
 /// Provider de Autenticación
 /// Gestiona el estado de autenticación del usuario
@@ -90,6 +92,7 @@ class AuthProvider with ChangeNotifier {
     String? telefono,
     String? direccion,
     String? idioma,
+    String? avatarUrl,
   }) async {
     if (_currentUser == null) return false;
 
@@ -102,14 +105,15 @@ class AuthProvider with ChangeNotifier {
         telefono: telefono,
         direccion: direccion,
         idioma: idioma,
+        avatarUrl: avatarUrl,
       );
 
-      // Actualizar usuario local
       _currentUser = _currentUser!.copyWith(
         nombre: nombre ?? _currentUser!.nombre,
         telefono: telefono ?? _currentUser!.telefono,
         direccion: direccion ?? _currentUser!.direccion,
         idioma: idioma ?? _currentUser!.idioma,
+        avatarUrl: avatarUrl ?? _currentUser!.avatarUrl,
       );
 
       _setLoading(false);
@@ -120,6 +124,33 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       return false;
     }
+  }
+
+  /// ACTUALIZAR MUTE DE NOTIFICACIONES
+  Future<bool> actualizarNotificacionesMute(DateTime? mutadaHasta) async {
+    if (_currentUser == null) return false;
+    try {
+      await _authService.updateProfile(notifMutadaHasta: mutadaHasta);
+      _currentUser = _currentUser!.copyWith(notifMutadaHasta: mutadaHasta);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// GETTERS ESTADO NOTIFICACIONES
+  bool get notifDesactivadas {
+    final hasta = _currentUser?.notifMutadaHasta;
+    if (hasta == null) return false;
+    return hasta.year >= 2100;
+  }
+
+  bool get notifSilenciadas {
+    final hasta = _currentUser?.notifMutadaHasta;
+    if (hasta == null) return false;
+    if (hasta.year >= 2100) return false;
+    return hasta.isAfter(DateTime.now());
   }
 
   /// VERIFICAR SI UN EMAIL EXISTE EN FIRESTORE
@@ -152,6 +183,21 @@ class AuthProvider with ChangeNotifier {
       await _authService.changePassword(currentPassword, newPassword);
       _setLoading(false);
       return true;
+    } catch (e) {
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// SUBIR IMAGEN Y ACTUALIZAR AVATAR
+  Future<bool> subirYActualizarAvatar(File imagen) async {
+    if (_currentUser == null) return false;
+    _setLoading(true);
+    _clearError();
+    try {
+      final url = await StorageService().subirAvatar(imagen, _currentUser!.id);
+      return await updateProfile(avatarUrl: url);
     } catch (e) {
       _setError(e.toString());
       _setLoading(false);

@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Claude/IA context (BORRAR al finalizar TFG)
+.ai/
+.claude/
+CLAUDE.md
+*.claude.md
+
+# VSCode Claude settings
+.vscode/settings.json

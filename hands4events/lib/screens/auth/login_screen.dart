@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/idioma_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
 import 'recuperar_password_screen.dart';
 
-/// Pantalla de inicio de sesión
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _recordarCuenta = false;
   bool _isLoading = false;
 
   @override
@@ -34,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = true);
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final t = context.read<IdiomaProvider>();
       final exito = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
@@ -45,17 +45,16 @@ class _LoginScreenState extends State<LoginScreen> {
         if (exito) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('¡Bienvenido! Iniciando sesión...'),
-              backgroundColor: AppTheme.verdeNeon.withOpacity(0.9),
+              content: Text(t.tr('bienvenido')),
+              backgroundColor: AppTheme.verdeNeon.withValues(alpha: 0.9),
               behavior: SnackBarBehavior.floating,
             ),
           );
-          // AuthWrapper detecta isAuthenticated=true y navega a MainScaffold
         } else {
-          final error = authProvider.errorMessage ?? 'Error al iniciar sesión';
+          final error = authProvider.errorMessage ?? '';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_traducirError(error)),
+              content: Text(_traducirError(error, t)),
               backgroundColor: AppTheme.rojoError,
               behavior: SnackBarBehavior.floating,
             ),
@@ -66,18 +65,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// Traduce errores de Firebase a mensajes legibles
-  String _traducirError(String error) {
+  String _traducirError(String error, IdiomaProvider t) {
     if (error.contains('user-not-found') || error.contains('invalid-credential')) {
-      return 'Correo o contraseña incorrectos';
+      return t.tr('error_credenciales');
     } else if (error.contains('wrong-password')) {
-      return 'Contraseña incorrecta';
+      return t.tr('error_credenciales');
     } else if (error.contains('too-many-requests')) {
-      return 'Demasiados intentos. Espera unos minutos';
+      return t.tr('error_muchos_intentos');
     } else if (error.contains('network-request-failed')) {
-      return 'Sin conexión a internet';
+      return t.tr('error_sin_conexion');
     }
-    return 'Error al iniciar sesión. Inténtalo de nuevo';
+    return t.tr('error_sesion_gen');
   }
 
   void _navigateToRecuperarPassword() {
@@ -91,6 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
+
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       body: SafeArea(
@@ -103,20 +103,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  
-                  // Header con etiqueta (estilo Figma - más pequeño y centrado)
+
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppTheme.fondoInput,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'INICIO DE SESIÓN',
+                        t.tr('inicio_sesion_etiqueta'),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: AppTheme.textoTerciario,
                           letterSpacing: 1.5,
@@ -125,10 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 60),
-                  
-                  // Logo de la mano verde GRANDE
+
                   Center(
                     child: Image.asset(
                       'assets/images/logo_hand.png',
@@ -137,23 +132,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
-                  // Título
+
                   Center(
                     child: Text(
-                      'Iniciar Sesión',
+                      t.tr('iniciar_sesion'),
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
-                  // Subtítulo
+
                   Center(
                     child: Text(
-                      'Accede a tu cuenta corporativa para gestionar eventos y\ncoordinar equipos de trabajo.',
+                      t.tr('subtitulo_login'),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.textoSecundario,
@@ -161,27 +154,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
-                  // Campo Email/Usuario
+
                   CustomTextField(
-                    hintText: 'Correo electrónico o nombre de usuario',
+                    hintText: t.tr('email_usuario'),
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor ingresa tu correo o usuario';
+                        return t.tr('error_campo_email');
                       }
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
-                  // Campo Contraseña
+
                   CustomTextField(
-                    hintText: 'Contraseña',
+                    hintText: t.tr('contrasena'),
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
@@ -192,70 +183,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppTheme.textoSecundario,
                       ),
                       onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
+                        setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor ingresa tu contraseña';
+                        return t.tr('error_campo_contrasena');
                       }
                       if (value.length < 6) {
-                        return 'La contraseña debe tener al menos 6 caracteres';
+                        return t.tr('error_contrasena_corta');
                       }
                       return null;
                     },
                   ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Checkbox Recordar cuenta
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: _recordarCuenta,
-                          onChanged: (value) {
-                            setState(() {
-                              _recordarCuenta = value ?? false;
-                            });
-                          },
-                          activeColor: AppTheme.verdeNeon,
-                          checkColor: AppTheme.textoSobreVerde,
-                          side: const BorderSide(
-                            color: AppTheme.bordeCampo,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Recordar cuenta',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  
+
                   const SizedBox(height: 32),
-                  
-                  // Botón Iniciar Sesión
+
                   PrimaryButton(
-                    text: 'Iniciar Sesión',
+                    text: t.tr('iniciar_sesion'),
                     onPressed: _handleLogin,
                     isLoading: _isLoading,
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
-                  // Link ¿Olvidaste tu contraseña?
+
                   Center(
                     child: TextButton(
                       onPressed: _navigateToRecuperarPassword,
                       child: Text(
-                        '¿Olvidaste tu contraseña?',
+                        t.tr('olvidaste_contrasena'),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.verdeNeon,
                           decoration: TextDecoration.underline,
@@ -264,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),

@@ -1,41 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import 'package:hands4events/models/evento.dart';
 import 'package:hands4events/screens/chat/chat_evento_screen.dart';
 import 'package:hands4events/screens/fichaje/fichaje_screen.dart';
+import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/outline_button.dart';
 
-/// Pantalla de detalle de un evento
-/// Recibe el objeto Evento completo desde EventosScreen
 class DetalleEventoScreen extends StatelessWidget {
   final Evento evento;
 
   const DetalleEventoScreen({super.key, required this.evento});
 
-  String get _fecha {
-    const meses = [
+  String _getFecha(String idioma) {
+    const mesesEs = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
     ];
+    const mesesEn = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    final meses = idioma == 'en' ? mesesEn : mesesEs;
     final f = evento.fechaInicio;
-    return '${f.day} de ${meses[f.month - 1]} de ${f.year}';
+    return idioma == 'en'
+        ? '${meses[f.month - 1]} ${f.day}, ${f.year}'
+        : '${f.day} de ${meses[f.month - 1]} de ${f.year}';
   }
 
-  String get _hora {
+  String _getHora() {
     String fmt(DateTime dt) =>
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     return '${fmt(evento.fechaInicio)} - ${fmt(evento.fechaFin)}';
   }
 
-  String get _tiempoEstimado {
+  String _getTiempoEstimado(IdiomaProvider t) {
     final horas = evento.duracionHoras;
-    return horas == 1 ? '1 hora' : '$horas horas';
+    final unidad = horas == 1 ? t.tr('hora_unidad') : t.tr('horas_unidad');
+    return '$horas $unidad';
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
+    final fecha = _getFecha(t.idioma);
+
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       appBar: AppBarCustom(
@@ -50,18 +61,16 @@ class DetalleEventoScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Sección: Información del Evento
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Información del Evento',
+                t.tr('info_evento'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // Card con información
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(20),
@@ -73,19 +82,19 @@ class DetalleEventoScreen extends StatelessWidget {
                 children: [
                   _buildInfoRow(context,
                     icono: Icons.calendar_today,
-                    titulo: 'Fecha',
-                    valor: _fecha,
+                    titulo: t.tr('fecha_label'),
+                    valor: fecha,
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(context,
                     icono: Icons.access_time,
-                    titulo: 'Hora',
-                    valor: _hora,
+                    titulo: t.tr('hora_label'),
+                    valor: _getHora(),
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(context,
                     icono: Icons.location_on,
-                    titulo: 'Ubicación',
+                    titulo: t.tr('ubicacion_label'),
                     valor: evento.ubicacion,
                   ),
                 ],
@@ -94,11 +103,10 @@ class DetalleEventoScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Descripción
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Descripción',
+                t.tr('descripcion_label'),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: AppTheme.textoTerciario,
                 ),
@@ -112,7 +120,7 @@ class DetalleEventoScreen extends StatelessWidget {
               child: Text(
                 evento.descripcion.isNotEmpty
                     ? evento.descripcion
-                    : 'Sin descripción disponible.',
+                    : t.tr('sin_descripcion'),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   height: 1.6,
                 ),
@@ -121,18 +129,16 @@ class DetalleEventoScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Sección: Tu Asignación
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Tu Asignación',
+                t.tr('tu_asignacion'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // Card asignación
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(20),
@@ -144,22 +150,22 @@ class DetalleEventoScreen extends StatelessWidget {
                 children: [
                   _buildInfoRow(context,
                     icono: Icons.attach_money,
-                    titulo: 'Cobro por Hora',
-                    valor: '${evento.cobroPorHora.toStringAsFixed(0)}€/hora',
+                    titulo: t.tr('cobro_hora'),
+                    valor: '${evento.cobroPorHora.toStringAsFixed(0)}€/h',
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(context,
                     icono: Icons.work_outline,
-                    titulo: 'Rol Asignado',
+                    titulo: t.tr('rol_asignado'),
                     valor: evento.rolAsignado.isNotEmpty
                         ? evento.rolAsignado
-                        : 'Sin especificar',
+                        : t.tr('sin_especificar'),
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(context,
                     icono: Icons.schedule,
-                    titulo: 'Tiempo Estimado',
-                    valor: _tiempoEstimado,
+                    titulo: t.tr('tiempo_estimado_label'),
+                    valor: _getTiempoEstimado(t),
                   ),
                 ],
               ),
@@ -167,15 +173,13 @@ class DetalleEventoScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // Botones de acción
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  // Botón CHAT
                   Expanded(
                     child: CustomOutlineButton(
-                      text: 'CHAT',
+                      text: t.tr('ir_chat'),
                       icon: Icons.chat_bubble_outline,
                       onPressed: () {
                         Navigator.push(
@@ -193,10 +197,9 @@ class DetalleEventoScreen extends StatelessWidget {
 
                   const SizedBox(width: 12),
 
-                  // Botón CLOCK IT
                   Expanded(
                     child: PrimaryButton(
-                      text: 'CLOCK IT',
+                      text: t.tr('fichaje'),
                       icon: Icons.access_time,
                       onPressed: () {
                         Navigator.push(
@@ -204,8 +207,10 @@ class DetalleEventoScreen extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (context) => FichajeScreen(
                               tituloEvento: evento.titulo,
-                              fecha: _fecha,
+                              fecha: fecha,
                               eventoId: evento.id,
+                              fechaInicio: evento.fechaInicio,
+                              fechaFin: evento.fechaFin,
                             ),
                           ),
                         );

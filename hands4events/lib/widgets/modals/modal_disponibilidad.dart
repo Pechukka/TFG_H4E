@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/disponibilidad_provider.dart';
+import '../../providers/idioma_provider.dart';
 import 'modal_base.dart';
 
-/// Modal para gestionar disponibilidad horaria
 class ModalDisponibilidad extends StatefulWidget {
   final DateTime fechaSeleccionada;
 
@@ -19,10 +22,39 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
   TimeOfDay _horaInicio = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _horaFin = const TimeOfDay(hour: 18, minute: 0);
   bool _aplicarATodosLosDias = false;
+  bool _isLoading = false;
+  String? _disponibilidadId;
 
-  String _getNombreDia() {
-    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    return dias[widget.fechaSeleccionada.weekday - 1];
+  @override
+  void initState() {
+    super.initState();
+    _cargarDisponibilidad();
+  }
+
+  Future<void> _cargarDisponibilidad() async {
+    final userId = context.read<AuthProvider>().currentUserId;
+    if (userId == null) return;
+
+    final disponibilidad = await context
+        .read<DisponibilidadProvider>()
+        .getDisponibilidadDia(userId, widget.fechaSeleccionada);
+
+    if (disponibilidad != null && mounted) {
+      setState(() {
+        _horaInicio = disponibilidad.horaInicio;
+        _horaFin = disponibilidad.horaFin;
+        _aplicarATodosLosDias = disponibilidad.aplicarRecurrente;
+        _disponibilidadId = disponibilidad.id;
+      });
+    }
+  }
+
+  String _getNombreDia(IdiomaProvider t) {
+    const keysEs = [
+      'dia_lunes', 'dia_martes', 'dia_miercoles',
+      'dia_jueves', 'dia_viernes', 'dia_sabado', 'dia_domingo'
+    ];
+    return t.tr(keysEs[widget.fechaSeleccionada.weekday - 1]);
   }
 
   Future<void> _seleccionarHora(BuildContext context, bool esInicio) async {
@@ -38,7 +70,7 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
               surface: AppTheme.fondoCard,
               onSurface: AppTheme.textoBlanco,
             ),
-            dialogBackgroundColor: AppTheme.fondoCard,
+            dialogTheme: const DialogThemeData(backgroundColor: AppTheme.fondoCard),
           ),
           child: child!,
         );
@@ -60,14 +92,72 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
     return '${hora.hour.toString().padLeft(2, '0')}:${hora.minute.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _eliminar(IdiomaProvider t) async {
+    if (_disponibilidadId == null) return;
+
+    setState(() => _isLoading = true);
+
+    await context
+        .read<DisponibilidadProvider>()
+        .eliminarDisponibilidad(_disponibilidadId!);
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t.tr('disponibilidad_eliminada')),
+          backgroundColor: AppTheme.rojoError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _guardar(IdiomaProvider t) async {
+    final userId = context.read<AuthProvider>().currentUserId;
+    if (userId == null) return;
+
+    setState(() => _isLoading = true);
+
+    final exito = await context.read<DisponibilidadProvider>().guardarDisponibilidad(
+          trabajadorId: userId,
+          fecha: widget.fechaSeleccionada,
+          horaInicio: _horaInicio,
+          horaFin: _horaFin,
+          aplicarRecurrente: _aplicarATodosLosDias,
+        );
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      Navigator.pop(context);
+      final nombreDia = _getNombreDia(t);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            exito
+                ? (_aplicarATodosLosDias
+                    ? '${t.tr('disponibilidad_guardada')} – ${t.tr('aplicar_recurrente_prefijo')}$nombreDia${t.tr('aplicar_recurrente_sufijo')}'
+                    : t.tr('disponibilidad_guardada'))
+                : 'Error',
+          ),
+          backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
+    final nombreDia = _getNombreDia(t);
+
     return ModalBase(
-      titulo: 'Disponibilidad horaria',
+      titulo: t.tr('disponibilidad_horaria'),
       contenido: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info del día
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -76,27 +166,23 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: AppTheme.verdeNeon,
-                  size: 20,
-                ),
+                const Icon(Icons.calendar_today, color: AppTheme.verdeNeon, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _getNombreDia(),
+                        nombreDia,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppTheme.verdeNeon,
-                        ),
+                              color: AppTheme.verdeNeon,
+                            ),
                       ),
                       Text(
                         '${widget.fechaSeleccionada.day}/${widget.fechaSeleccionada.month}/${widget.fechaSeleccionada.year}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textoSecundario,
-                        ),
+                              color: AppTheme.textoSecundario,
+                            ),
                       ),
                     ],
                   ),
@@ -107,26 +193,21 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
 
           const SizedBox(height: 32),
 
-          // Selección de horario
-          Text(
-            'Horario disponible',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(t.tr('horario_disponible'), style: Theme.of(context).textTheme.titleMedium),
 
           const SizedBox(height: 16),
 
           Row(
             children: [
-              // Hora inicio
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Desde',
+                      t.tr('desde'),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.textoTerciario,
-                      ),
+                            color: AppTheme.textoTerciario,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -137,23 +218,14 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                         decoration: BoxDecoration(
                           color: AppTheme.fondoInput,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppTheme.bordeCampo,
-                            width: 1,
-                          ),
+                          border: Border.all(color: AppTheme.bordeCampo, width: 1),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              _formatearHora(_horaInicio),
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const Icon(
-                              Icons.access_time,
-                              color: AppTheme.verdeNeon,
-                              size: 20,
-                            ),
+                            Text(_formatearHora(_horaInicio),
+                                style: Theme.of(context).textTheme.titleMedium),
+                            const Icon(Icons.access_time, color: AppTheme.verdeNeon, size: 20),
                           ],
                         ),
                       ),
@@ -161,19 +233,16 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                   ],
                 ),
               ),
-
               const SizedBox(width: 16),
-
-              // Hora fin
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hasta',
+                      t.tr('hasta_hora'),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.textoTerciario,
-                      ),
+                            color: AppTheme.textoTerciario,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -184,23 +253,14 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                         decoration: BoxDecoration(
                           color: AppTheme.fondoInput,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppTheme.bordeCampo,
-                            width: 1,
-                          ),
+                          border: Border.all(color: AppTheme.bordeCampo, width: 1),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              _formatearHora(_horaFin),
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const Icon(
-                              Icons.access_time,
-                              color: AppTheme.verdeNeon,
-                              size: 20,
-                            ),
+                            Text(_formatearHora(_horaFin),
+                                style: Theme.of(context).textTheme.titleMedium),
+                            const Icon(Icons.access_time, color: AppTheme.verdeNeon, size: 20),
                           ],
                         ),
                       ),
@@ -213,7 +273,6 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
 
           const SizedBox(height: 32),
 
-          // Switch aplicar a todos los días de la semana
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -231,17 +290,19 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Aplicar a todos los ${_getNombreDia()}s',
+                        '${t.tr('aplicar_recurrente_prefijo')}$nombreDia${t.tr('aplicar_recurrente_sufijo')}',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: _aplicarATodosLosDias ? AppTheme.verdeNeon : AppTheme.textoBlanco,
-                        ),
+                              color: _aplicarATodosLosDias
+                                  ? AppTheme.verdeNeon
+                                  : AppTheme.textoBlanco,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Este horario se aplicará automáticamente a todos los ${_getNombreDia().toLowerCase()}s',
+                        '${t.tr('recurrente_desc')}${nombreDia.toLowerCase()}${t.tr('recurrente_desc2')}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textoSecundario,
-                        ),
+                              color: AppTheme.textoSecundario,
+                            ),
                       ),
                     ],
                   ),
@@ -249,13 +310,9 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                 const SizedBox(width: 12),
                 Switch(
                   value: _aplicarATodosLosDias,
-                  onChanged: (value) {
-                    setState(() {
-                      _aplicarATodosLosDias = value;
-                    });
-                  },
-                  activeColor: AppTheme.verdeNeon,
-                  activeTrackColor: AppTheme.verdeNeon.withOpacity(0.5),
+                  onChanged: (value) => setState(() => _aplicarATodosLosDias = value),
+                  activeThumbColor: AppTheme.verdeNeon,
+                  activeTrackColor: AppTheme.verdeNeon.withValues(alpha: 0.5),
                 ),
               ],
             ),
@@ -263,31 +320,23 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
 
           const SizedBox(height: 24),
 
-          // Info adicional
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.verdeNeon.withOpacity(0.1),
+              color: AppTheme.verdeNeon.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppTheme.verdeNeon.withOpacity(0.3),
-                width: 1,
-              ),
+              border: Border.all(color: AppTheme.verdeNeon.withValues(alpha: 0.3), width: 1),
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.info_outline,
-                  color: AppTheme.verdeNeon,
-                  size: 20,
-                ),
+                const Icon(Icons.info_outline, color: AppTheme.verdeNeon, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Solo estarás disponible para eventos dentro de este horario',
+                    t.tr('disponibilidad_info'),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textoSecundario,
-                    ),
+                          color: AppTheme.textoSecundario,
+                        ),
                   ),
                 ),
               ],
@@ -300,35 +349,47 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    _aplicarATodosLosDias
-                        ? 'Disponibilidad guardada para todos los ${_getNombreDia()}s'
-                        : 'Disponibilidad guardada',
-                  ),
-                  backgroundColor: AppTheme.verdeExito,
-                ),
-              );
-            },
+            onPressed: _isLoading ? null : () => _guardar(t),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.verdeNeon,
               foregroundColor: AppTheme.textoSobreVerde,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text(
-              'Guardar disponibilidad',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.textoSobreVerde),
+                  )
+                : Text(
+                    t.tr('guardar_disponibilidad'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ),
+        if (_disponibilidadId != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: OutlinedButton.icon(
+              onPressed: _isLoading ? null : () => _eliminar(t),
+              icon: const Icon(Icons.delete_outline, color: AppTheme.rojoError),
+              label: Text(
+                t.tr('eliminar_disponibilidad'),
+                style: const TextStyle(
+                  color: AppTheme.rojoError,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppTheme.rojoError),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

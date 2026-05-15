@@ -12,12 +12,17 @@ class NominasService {
     return _firestore
         .collection(AppConstants.colNominas)
         .where('trabajadorId', isEqualTo: trabajadorId)
-        .orderBy('anio', descending: true)
-        .orderBy('mesNumero', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Nomina.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final lista = snapshot.docs
+              .map((doc) => Nomina.fromFirestore(doc))
+              .toList();
+          lista.sort((a, b) {
+            final yearComp = b.anio.compareTo(a.anio);
+            return yearComp != 0 ? yearComp : b.mesNumero.compareTo(a.mesNumero);
+          });
+          return lista;
+        });
   }
 
   /// OBTENER NÓMINA POR MES/AÑO
@@ -55,14 +60,14 @@ class NominasService {
     final snapshot = await _firestore
         .collection(AppConstants.colNominas)
         .where('trabajadorId', isEqualTo: trabajadorId)
-        .orderBy('anio', descending: true)
-        .orderBy('mesNumero', descending: true)
-        .limit(limite)
         .get();
 
-    return snapshot.docs
-        .map((doc) => Nomina.fromFirestore(doc))
-        .toList();
+    final lista = snapshot.docs.map((doc) => Nomina.fromFirestore(doc)).toList();
+    lista.sort((a, b) {
+      final y = b.anio.compareTo(a.anio);
+      return y != 0 ? y : b.mesNumero.compareTo(a.mesNumero);
+    });
+    return lista.take(limite).toList();
   }
 
   /// CALCULAR TOTAL GANADO EN EL AÑO

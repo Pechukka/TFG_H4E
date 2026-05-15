@@ -1,4 +1,11 @@
 class AppConstants {
+  // Google Maps API Key — reemplazar con la tuya en Google Cloud Console
+  // (Maps SDK for Android + Places API habilitados)
+  static const String googleMapsApiKey = 'AIzaSyDSmbT8xDTvuonInBdCxAqdxuPu_7uOs3Y';
+
+  // Google Cloud Translation API Key — habilitar "Cloud Translation API" en Google Cloud Console
+  // Puede usar la misma clave que Maps si tiene permisos suficientes
+  static const String googleTranslationApiKey = 'AIzaSyDSmbT8xDTvuonInBdCxAqdxuPu_7uOs3Y';
   // Roles
   static const String rolWorker = 'worker';
   static const String rolAdmin = 'admin';

@@ -1,0 +1,31 @@
+# Build outputs
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Assets grandes
+assets/videos/
+assets/fonts/
+
+# Tests
+test/
+integration_test/
+
+# Documentación externa
+docs/external/
+README_SPANISH.md
+
+# Logs
+*.log

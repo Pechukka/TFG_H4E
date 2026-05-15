@@ -43,6 +43,7 @@ class DisponibilidadService {
   }
 
   /// CREAR DISPONIBILIDAD RECURRENTE
+  /// Crea entradas para el mismo día de la semana durante los próximos 2 años
   Future<void> _crearDisponibilidadRecurrente({
     required String trabajadorId,
     required DateTime fecha,
@@ -50,25 +51,23 @@ class DisponibilidadService {
     required TimeOfDay horaFin,
   }) async {
     final diaSemana = fecha.weekday;
-    final primerDia = DateTime(fecha.year, fecha.month, 1);
-    final ultimoDia = DateTime(fecha.year, fecha.month + 1, 0);
+    final fechaFin = DateTime(fecha.year + 2, fecha.month, fecha.day);
 
     final batch = _firestore.batch();
-    var diaActual = primerDia;
+    var diaActual = fecha.add(const Duration(days: 1));
 
-    while (diaActual.isBefore(ultimoDia) || diaActual.isAtSameMomentAs(ultimoDia)) {
-      if (diaActual.weekday == diaSemana && diaActual != fecha) {
+    while (diaActual.isBefore(fechaFin)) {
+      if (diaActual.weekday == diaSemana) {
         final disp = Disponibilidad(
           id: '',
           trabajadorId: trabajadorId,
-          fecha: diaActual,
+          fecha: DateTime(diaActual.year, diaActual.month, diaActual.day),
           horaInicio: horaInicio,
           horaFin: horaFin,
           aplicarRecurrente: true,
           diaSemana: diaSemana,
           createdAt: DateTime.now(),
         );
-
         final ref = _firestore.collection(AppConstants.colDisponibilidad).doc();
         batch.set(ref, disp.toFirestore());
       }
@@ -86,18 +85,18 @@ class DisponibilidadService {
     final inicio = DateTime(fecha.year, fecha.month, fecha.day);
     final fin = inicio.add(const Duration(days: 1));
 
+    // Filtramos en Dart para evitar índice compuesto en Firestore
     final snapshot = await _firestore
         .collection(AppConstants.colDisponibilidad)
         .where('trabajadorId', isEqualTo: trabajadorId)
-        .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(inicio))
-        .where('fecha', isLessThan: Timestamp.fromDate(fin))
-        .limit(1)
         .get();
 
-    if (snapshot.docs.isNotEmpty) {
-      return Disponibilidad.fromFirestore(snapshot.docs.first);
-    }
-    return null;
+    final coincidencias = snapshot.docs
+        .map((doc) => Disponibilidad.fromFirestore(doc))
+        .where((d) => !d.fecha.isBefore(inicio) && d.fecha.isBefore(fin))
+        .toList();
+
+    return coincidencias.isNotEmpty ? coincidencias.first : null;
   }
 
   /// OBTENER DISPONIBILIDADES DEL MES
@@ -109,19 +108,19 @@ class DisponibilidadService {
     final inicio = DateTime(anio, mes, 1);
     final fin = DateTime(anio, mes + 1, 1);
 
+    // Filtramos en Dart para evitar índice compuesto en Firestore
     final snapshot = await _firestore
         .collection(AppConstants.colDisponibilidad)
         .where('trabajadorId', isEqualTo: trabajadorId)
-        .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(inicio))
-        .where('fecha', isLessThan: Timestamp.fromDate(fin))
         .get();
 
     final Map<int, bool> diasConDisponibilidad = {};
     for (var doc in snapshot.docs) {
       final disp = Disponibilidad.fromFirestore(doc);
-      diasConDisponibilidad[disp.fecha.day] = true;
+      if (!disp.fecha.isBefore(inicio) && disp.fecha.isBefore(fin)) {
+        diasConDisponibilidad[disp.fecha.day] = true;
+      }
     }
-
     return diasConDisponibilidad;
   }
 

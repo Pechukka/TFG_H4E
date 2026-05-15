@@ -4,23 +4,26 @@ import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/fichaje_provider.dart';
+import '../../providers/idioma_provider.dart';
 import '../../models/fichaje.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/outline_button.dart';
 
-/// Pantalla de fichaje (Clock It)
-/// Permite registrar entrada, salida y pausas con validación GPS
 class FichajeScreen extends StatefulWidget {
   final String tituloEvento;
   final String fecha;
   final String eventoId;
+  final DateTime? fechaInicio;
+  final DateTime? fechaFin;
 
   const FichajeScreen({
     super.key,
     required this.tituloEvento,
     required this.fecha,
     this.eventoId = '',
+    this.fechaInicio,
+    this.fechaFin,
   });
 
   @override
@@ -48,9 +51,9 @@ class _FichajeScreenState extends State<FichajeScreen> {
   void _cargarFichajeActivo() {
     final userId = context.read<AuthProvider>().currentUserId;
     if (userId != null && widget.eventoId.isNotEmpty) {
-      context
-          .read<FichajeProvider>()
-          .cargarFichajeActivo(userId, widget.eventoId);
+      final provider = context.read<FichajeProvider>();
+      provider.cargarFichajeActivo(userId, widget.eventoId);
+      provider.cargarHistorial(userId, widget.eventoId);
     }
   }
 
@@ -71,6 +74,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
     if (userId == null) return;
 
     final provider = context.read<FichajeProvider>();
+    final t = context.read<IdiomaProvider>();
     final exito = await provider.ficharEntrada(userId, widget.eventoId);
 
     if (mounted) {
@@ -78,13 +82,13 @@ class _FichajeScreenState extends State<FichajeScreen> {
         _iniciarTimerUI();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Fichaje iniciado correctamente'),
-            backgroundColor: AppTheme.verdeNeon.withOpacity(0.9),
+            content: Text(t.tr('fichaje_iniciado')),
+            backgroundColor: AppTheme.verdeNeon.withValues(alpha: 0.9),
             behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
-        _mostrarError(provider.errorMessage ?? 'Error al fichar entrada');
+        _mostrarError(provider.errorMessage ?? t.tr('error_fichar_entrada'));
         provider.clearError();
       }
     }
@@ -92,13 +96,14 @@ class _FichajeScreenState extends State<FichajeScreen> {
 
   Future<void> _pausarFichaje() async {
     final provider = context.read<FichajeProvider>();
+    final t = context.read<IdiomaProvider>();
     final exito = await provider.pausarFichaje();
 
     if (mounted) {
       if (exito) {
         _detenerTimerUI();
       } else {
-        _mostrarError(provider.errorMessage ?? 'Error al pausar');
+        _mostrarError(provider.errorMessage ?? t.tr('error_pausar'));
         provider.clearError();
       }
     }
@@ -106,34 +111,40 @@ class _FichajeScreenState extends State<FichajeScreen> {
 
   Future<void> _reanudarFichaje() async {
     final provider = context.read<FichajeProvider>();
+    final t = context.read<IdiomaProvider>();
     final exito = await provider.reanudarFichaje();
 
     if (mounted) {
       if (exito) {
         _iniciarTimerUI();
       } else {
-        _mostrarError(provider.errorMessage ?? 'Error al reanudar');
+        _mostrarError(provider.errorMessage ?? t.tr('error_reanudar'));
         provider.clearError();
       }
     }
   }
 
   Future<void> _finalizarFichaje() async {
+    final userId = context.read<AuthProvider>().currentUserId;
     final provider = context.read<FichajeProvider>();
+    final t = context.read<IdiomaProvider>();
     final exito = await provider.ficharSalida();
 
     if (mounted) {
       _detenerTimerUI();
       if (exito) {
+        if (userId != null && widget.eventoId.isNotEmpty) {
+          provider.cargarHistorial(userId, widget.eventoId);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Fichaje finalizado correctamente'),
-            backgroundColor: AppTheme.verdeNeon.withOpacity(0.9),
+            content: Text(t.tr('fichaje_finalizado_ok')),
+            backgroundColor: AppTheme.verdeNeon.withValues(alpha: 0.9),
             behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
-        _mostrarError(provider.errorMessage ?? 'Error al fichar salida');
+        _mostrarError(provider.errorMessage ?? t.tr('error_fichar_salida'));
         provider.clearError();
       }
     }
@@ -149,18 +160,69 @@ class _FichajeScreenState extends State<FichajeScreen> {
     );
   }
 
+  // ─── Restricciones de fichaje ──────────────────────────────────────────────
+
+  bool _puedeIniciarFichaje(FichajeProvider provider) {
+    if (widget.fechaInicio == null) return true;
+
+    final ahora = DateTime.now();
+
+    // Evento ya terminado → nunca permitir
+    if (widget.fechaFin != null && ahora.isAfter(widget.fechaFin!)) {
+      return false;
+    }
+
+    final ventana = widget.fechaInicio!.subtract(const Duration(hours: 1));
+
+    // Primera vez: solo dentro de la ventana de 1h antes o durante el evento
+    if (provider.historial.isEmpty) {
+      return !ahora.isBefore(ventana);
+    }
+
+    // Tras finalizar un fichaje: solo si el evento ya ha comenzado
+    return !ahora.isBefore(widget.fechaInicio!);
+  }
+
+  String _mensajeBloqueo(FichajeProvider provider, IdiomaProvider t) {
+    if (widget.fechaInicio == null) return '';
+
+    final ahora = DateTime.now();
+
+    // Evento ya terminado
+    if (widget.fechaFin != null && ahora.isAfter(widget.fechaFin!)) {
+      return t.tr('fichaje_evento_terminado');
+    }
+
+    final ventana = widget.fechaInicio!.subtract(const Duration(hours: 1));
+
+    // Primera vez, todavía lejos del inicio → mostrar cuenta atrás
+    if (provider.historial.isEmpty && ahora.isBefore(ventana)) {
+      final diff = ventana.difference(ahora);
+      final h = diff.inHours;
+      final m = diff.inMinutes.remainder(60);
+      final tiempo = h > 0 ? '${h}h ${m}m' : '${m}m';
+      return '${t.tr('fichaje_disponible_en')} $tiempo';
+    }
+
+    // Tras un fichaje previo pero el evento aún no ha empezado
+    if (provider.historial.isNotEmpty && ahora.isBefore(widget.fechaInicio!)) {
+      return t.tr('fichaje_evento_no_iniciado');
+    }
+
+    return '';
+  }
+
+  String _formatHora(DateTime? dt) {
+    if (dt == null) return '--:--';
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatFecha(DateTime? dt) {
+    if (dt == null) return '';
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+  }
+
   // ─── Helpers visuales (idénticos al diseño original) ───────────────────────
-
-  FichajeEstado get _estado {
-    final fichaje = context.read<FichajeProvider>().fichajeActivo;
-    if (fichaje == null) return FichajeEstado.noIniciado;
-    return fichaje.estado;
-  }
-
-  String get _tiempoFormateado {
-    final fichaje = context.read<FichajeProvider>().fichajeActivo;
-    return fichaje?.tiempoFormateado ?? '00:00:00';
-  }
 
   Color _getEstadoColor(FichajeEstado estado) {
     switch (estado) {
@@ -175,16 +237,16 @@ class _FichajeScreenState extends State<FichajeScreen> {
     }
   }
 
-  String _getEstadoTexto(FichajeEstado estado) {
+  String _getEstadoTexto(FichajeEstado estado, IdiomaProvider t) {
     switch (estado) {
       case FichajeEstado.enCurso:
-        return 'Fichaje en curso';
+        return t.tr('estado_en_curso');
       case FichajeEstado.pausado:
-        return 'Fichaje en pausa';
+        return t.tr('estado_pausado');
       case FichajeEstado.finalizado:
-        return 'Fichaje finalizado';
+        return t.tr('estado_finalizado');
       default:
-        return 'No iniciado';
+        return t.tr('estado_no_iniciado');
     }
   }
 
@@ -203,18 +265,21 @@ class _FichajeScreenState extends State<FichajeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     final provider = context.watch<FichajeProvider>();
     final fichaje = provider.fichajeActivo;
     final estado = fichaje?.estado ?? FichajeEstado.noIniciado;
     final tiempo = fichaje?.tiempoFormateado ?? '00:00:00';
     final cargando = provider.isLoading;
+    final puedeIniciar = _puedeIniciarFichaje(provider);
+    final mensajeBloqueo = _mensajeBloqueo(provider, t);
 
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
-      appBar: const AppBarCustom(
+      appBar: AppBarCustom(
         showLogo: true,
         showBackButton: true,
-        title: 'Fichaje',
+        title: t.tr('fichaje'),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -262,9 +327,8 @@ class _FichajeScreenState extends State<FichajeScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Estado actual
                     Text(
-                      'Estado actual',
+                      t.tr('estado_actual'),
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: AppTheme.textoTerciario,
                       ),
@@ -283,7 +347,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _getEstadoTexto(estado),
+                          _getEstadoTexto(estado, t),
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -313,16 +377,45 @@ class _FichajeScreenState extends State<FichajeScreen> {
               // Botones según estado
               if (estado == FichajeEstado.noIniciado) ...[
                 PrimaryButton(
-                  text: 'FICHAR ENTRADA',
+                  text: t.tr('fichar_entrada'),
                   icon: Icons.login,
                   isLoading: cargando,
-                  onPressed: _iniciarFichaje,
+                  onPressed: puedeIniciar ? _iniciarFichaje : null,
                 ),
+                if (!puedeIniciar && mensajeBloqueo.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.amarilloAdvertencia.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppTheme.amarilloAdvertencia.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time,
+                            color: AppTheme.amarilloAdvertencia, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          mensajeBloqueo,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.amarilloAdvertencia,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
 
               if (estado == FichajeEstado.enCurso) ...[
                 CustomOutlineButton(
-                  text: 'PAUSAR',
+                  text: t.tr('pausar'),
                   icon: Icons.pause,
                   borderColor: AppTheme.amarilloAdvertencia,
                   textColor: AppTheme.amarilloAdvertencia,
@@ -331,7 +424,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
                 ),
                 const SizedBox(height: 12),
                 PrimaryButton(
-                  text: 'FICHAR SALIDA',
+                  text: t.tr('fichar_salida'),
                   icon: Icons.logout,
                   isLoading: cargando,
                   onPressed: _finalizarFichaje,
@@ -340,14 +433,14 @@ class _FichajeScreenState extends State<FichajeScreen> {
 
               if (estado == FichajeEstado.pausado) ...[
                 CustomOutlineButton(
-                  text: 'REANUDAR',
+                  text: t.tr('reanudar'),
                   icon: Icons.play_arrow,
                   isLoading: cargando,
                   onPressed: _reanudarFichaje,
                 ),
                 const SizedBox(height: 12),
                 PrimaryButton(
-                  text: 'FICHAR SALIDA',
+                  text: t.tr('fichar_salida'),
                   icon: Icons.logout,
                   isLoading: cargando,
                   onPressed: _finalizarFichaje,
@@ -359,7 +452,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppTheme.verdeNeon.withOpacity(0.1),
+                    color: AppTheme.verdeNeon.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppTheme.verdeNeon, width: 1),
                   ),
@@ -369,7 +462,7 @@ class _FichajeScreenState extends State<FichajeScreen> {
                       const Icon(Icons.check_circle, color: AppTheme.verdeNeon),
                       const SizedBox(width: 8),
                       Text(
-                        'Fichaje completado',
+                        t.tr('fichaje_completado'),
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: AppTheme.verdeNeon,
                         ),
@@ -381,14 +474,78 @@ class _FichajeScreenState extends State<FichajeScreen> {
 
               const SizedBox(height: 24),
 
-              // Texto info GPS
               Text(
-                'La ubicación se registra al fichar entrada y salida',
+                t.tr('gps_info'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.textoTerciario,
                 ),
               ),
+
+              // ─── Historial de fichajes finalizados ───────────────────
+              if (provider.historial.isNotEmpty) ...[
+                const SizedBox(height: 40),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    t.tr('historial'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...provider.historial.map((f) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.fondoCard,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.verdeNeon.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline,
+                          color: AppTheme.verdeNeon,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _formatFecha(f.entrada),
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: AppTheme.textoSecundario,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_formatHora(f.entrada)} → ${_formatHora(f.salida)}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppTheme.textoBlanco,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        f.tiempoFormateado,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppTheme.verdeNeon,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
 
               const SizedBox(height: 40),
             ],

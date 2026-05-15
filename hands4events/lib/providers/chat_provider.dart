@@ -4,8 +4,6 @@ import '../models/mensaje.dart';
 import '../services/chat_service.dart';
 import '../services/storage_service.dart';
 
-/// Provider de Chat
-/// Gestiona mensajes en tiempo real por evento
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
   final StorageService _storageService = StorageService();
@@ -16,47 +14,47 @@ class ChatProvider with ChangeNotifier {
   String? _errorMessage;
   int _mensajesNoLeidos = 0;
 
-  // Getters
   List<Mensaje> get mensajes => _mensajes;
   bool get isLoading => _isLoading;
   bool get isSending => _isSending;
   String? get errorMessage => _errorMessage;
   int get mensajesNoLeidos => _mensajesNoLeidos;
 
-  /// CARGAR MENSAJES DEL EVENTO
   void cargarMensajes(String eventoId) {
+    _setLoading(true);
     _chatService.getMensajesEvento(eventoId).listen(
       (mensajes) {
         _mensajes = mensajes;
+        _isLoading = false;
         notifyListeners();
       },
-      onError: (error) {
-        _setError('Error al cargar mensajes: $error');
-      },
+      onError: (error) => _setError('Error al cargar mensajes: $error'),
     );
   }
 
-  /// ENVIAR MENSAJE
   Future<bool> enviarMensaje({
     required String eventoId,
     required String remitenteId,
     required String remitenteNombre,
     required String texto,
+    String? replyToId,
+    String? replyToNombre,
+    String? replyToTexto,
   }) async {
     if (texto.trim().isEmpty) return false;
-
     _isSending = true;
     _clearError();
     notifyListeners();
-
     try {
       await _chatService.enviarMensaje(
         eventoId: eventoId,
         remitenteId: remitenteId,
         remitenteNombre: remitenteNombre,
         texto: texto,
+        replyToId: replyToId,
+        replyToNombre: replyToNombre,
+        replyToTexto: replyToTexto,
       );
-
       _isSending = false;
       notifyListeners();
       return true;
@@ -68,7 +66,6 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  /// ENVIAR MENSAJE CON IMAGEN
   Future<bool> enviarMensajeConImagen({
     required String eventoId,
     required String remitenteId,
@@ -79,12 +76,9 @@ class ChatProvider with ChangeNotifier {
     _isSending = true;
     _clearError();
     notifyListeners();
-
     try {
-      // Subir imagen a Storage
-      final imagenUrl = await _storageService.subirImagenChat(imagen, eventoId);
-
-      // Enviar mensaje con URL de imagen
+      final imagenUrl =
+          await _storageService.subirImagenChat(imagen, eventoId);
       await _chatService.enviarMensajeConImagen(
         eventoId: eventoId,
         remitenteId: remitenteId,
@@ -92,7 +86,6 @@ class ChatProvider with ChangeNotifier {
         imagenUrl: imagenUrl,
         texto: texto,
       );
-
       _isSending = false;
       notifyListeners();
       return true;
@@ -104,7 +97,57 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  /// MARCAR MENSAJES COMO LEÍDOS
+  Future<bool> enviarUbicacion({
+    required String eventoId,
+    required String remitenteId,
+    required String remitenteNombre,
+    required double lat,
+    required double lng,
+  }) async {
+    _isSending = true;
+    _clearError();
+    notifyListeners();
+    try {
+      await _chatService.enviarUbicacion(
+        eventoId: eventoId,
+        remitenteId: remitenteId,
+        remitenteNombre: remitenteNombre,
+        lat: lat,
+        lng: lng,
+      );
+      _isSending = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Error al enviar ubicación: $e');
+      _isSending = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> editarMensaje(String mensajeId, String nuevoTexto) async {
+    try {
+      await _chatService.editarMensaje(mensajeId, nuevoTexto);
+      return true;
+    } catch (e) {
+      _setError('Error al editar mensaje: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> eliminarMensaje(String mensajeId) async {
+    try {
+      await _chatService.eliminarMensaje(mensajeId);
+      return true;
+    } catch (e) {
+      _setError('Error al eliminar mensaje: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> marcarMensajesLeidos(String eventoId, String userId) async {
     try {
       await _chatService.marcarMensajesLeidos(eventoId, userId);
@@ -115,24 +158,30 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  /// CONTAR MENSAJES NO LEÍDOS
   Future<void> contarMensajesNoLeidos(String eventoId, String userId) async {
     try {
-      _mensajesNoLeidos = await _chatService.contarMensajesNoLeidos(eventoId, userId);
+      _mensajesNoLeidos =
+          await _chatService.contarMensajesNoLeidos(eventoId, userId);
       notifyListeners();
     } catch (e) {
       _setError('Error al contar mensajes no leídos: $e');
     }
   }
 
-  /// LIMPIAR MENSAJES (al salir del chat)
   void limpiarMensajes() {
     _mensajes = [];
     _mensajesNoLeidos = 0;
     notifyListeners();
   }
 
-  // Métodos auxiliares
+  void reset() {
+    limpiarMensajes();
+    _isLoading = false;
+    _isSending = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
@@ -143,9 +192,7 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void _clearError() {
-    _errorMessage = null;
-  }
+  void _clearError() => _errorMessage = null;
 
   void clearError() {
     _clearError();

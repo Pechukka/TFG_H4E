@@ -148,12 +148,26 @@ class FichajesService {
     final snapshot = await _firestore
         .collection(AppConstants.colFichajes)
         .where('trabajadorId', isEqualTo: trabajadorId)
-        .orderBy('entrada', descending: true)
         .get();
 
-    return snapshot.docs
+    final lista = snapshot.docs.map((doc) => Fichaje.fromFirestore(doc)).toList();
+    lista.sort((a, b) => (b.entrada ?? DateTime(0)).compareTo(a.entrada ?? DateTime(0)));
+    return lista;
+  }
+
+  /// OBTENER FICHAJES FINALIZADOS DE UN EVENTO (historial)
+  Future<List<Fichaje>> getFichajesEvento(String trabajadorId, String eventoId) async {
+    final snapshot = await _firestore
+        .collection(AppConstants.colFichajes)
+        .where('trabajadorId', isEqualTo: trabajadorId)
+        .get();
+
+    final lista = snapshot.docs
         .map((doc) => Fichaje.fromFirestore(doc))
+        .where((f) => f.eventoId == eventoId && f.estado == FichajeEstado.finalizado)
         .toList();
+    lista.sort((a, b) => (b.entrada ?? DateTime(0)).compareTo(a.entrada ?? DateTime(0)));
+    return lista;
   }
 
   /// VALIDAR GPS (opcional - requiere configuración adicional)
@@ -176,7 +190,7 @@ class FichajesService {
     }
 
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 }

@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Modelo de Mensaje de Chat
-/// Mensajes dentro del chat de un evento específico
 class Mensaje {
   final String id;
   final String eventoId;
@@ -10,7 +8,12 @@ class Mensaje {
   final String texto;
   final DateTime timestamp;
   final bool leido;
-  final String? imagenUrl; // URL si el mensaje contiene imagen
+  final String? imagenUrl;
+  final String tipo; // 'texto', 'imagen', 'ubicacion'
+  final bool editado;
+  final String? replyToId;
+  final String? replyToNombre;
+  final String? replyToTexto;
 
   const Mensaje({
     required this.id,
@@ -21,35 +24,22 @@ class Mensaje {
     required this.timestamp,
     this.leido = false,
     this.imagenUrl,
+    this.tipo = 'texto',
+    this.editado = false,
+    this.replyToId,
+    this.replyToNombre,
+    this.replyToTexto,
   });
 
-  // Getters
   String get horaFormateada {
     return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
   }
 
-  String get fechaFormateada {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays == 0) {
-      return 'Hoy ${horaFormateada}';
-    } else if (difference.inDays == 1) {
-      return 'Ayer ${horaFormateada}';
-    } else if (difference.inDays < 7) {
-      const dias = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-      return '${dias[timestamp.weekday]} ${horaFormateada}';
-    } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year} ${horaFormateada}';
-    }
-  }
-
   bool tieneImagen() => imagenUrl != null && imagenUrl!.isNotEmpty;
+  bool tieneReply() => replyToId != null && replyToId!.isNotEmpty;
 
-  // Firebase → Dart
   factory Mensaje.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
     return Mensaje(
       id: doc.id,
       eventoId: data['eventoId'] ?? '',
@@ -59,10 +49,14 @@ class Mensaje {
       timestamp: (data['timestamp'] as Timestamp).toDate(),
       leido: data['leido'] ?? false,
       imagenUrl: data['imagenUrl'] as String?,
+      tipo: data['tipo'] as String? ?? 'texto',
+      editado: data['editado'] as bool? ?? false,
+      replyToId: data['replyToId'] as String?,
+      replyToNombre: data['replyToNombre'] as String?,
+      replyToTexto: data['replyToTexto'] as String?,
     );
   }
 
-  // Dart → Firebase
   Map<String, dynamic> toFirestore() {
     return {
       'eventoId': eventoId,
@@ -72,10 +66,14 @@ class Mensaje {
       'timestamp': Timestamp.fromDate(timestamp),
       'leido': leido,
       'imagenUrl': imagenUrl,
+      'tipo': tipo,
+      'editado': editado,
+      if (replyToId != null) 'replyToId': replyToId,
+      if (replyToNombre != null) 'replyToNombre': replyToNombre,
+      if (replyToTexto != null) 'replyToTexto': replyToTexto,
     };
   }
 
-  // CopyWith
   Mensaje copyWith({
     String? id,
     String? eventoId,
@@ -85,6 +83,11 @@ class Mensaje {
     DateTime? timestamp,
     bool? leido,
     String? imagenUrl,
+    String? tipo,
+    bool? editado,
+    String? replyToId,
+    String? replyToNombre,
+    String? replyToTexto,
   }) {
     return Mensaje(
       id: id ?? this.id,
@@ -95,11 +98,11 @@ class Mensaje {
       timestamp: timestamp ?? this.timestamp,
       leido: leido ?? this.leido,
       imagenUrl: imagenUrl ?? this.imagenUrl,
+      tipo: tipo ?? this.tipo,
+      editado: editado ?? this.editado,
+      replyToId: replyToId ?? this.replyToId,
+      replyToNombre: replyToNombre ?? this.replyToNombre,
+      replyToTexto: replyToTexto ?? this.replyToTexto,
     );
-  }
-
-  // Marcar como leído
-  Mensaje marcarLeido() {
-    return copyWith(leido: true);
   }
 }

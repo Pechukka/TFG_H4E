@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../providers/idioma_provider.dart';
+import '../providers/notificaciones_provider.dart';
 
-/// Barra de navegación inferior de la app
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -14,6 +16,9 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
+    final noLeidas = context.watch<NotificacionesProvider>().noLeidas;
+
     return Container(
       height: 80,
       decoration: const BoxDecoration(
@@ -33,26 +38,38 @@ class CustomBottomNavBar extends StatelessWidget {
         selectedFontSize: 12,
         unselectedFontSize: 12,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Escritorio',
+            icon: Badge(
+              isLabelVisible: noLeidas > 0,
+              label: Text(noLeidas > 9 ? '9+' : '$noLeidas'),
+              backgroundColor: AppTheme.rojoError,
+              textStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+              child: const Icon(Icons.home_outlined),
+            ),
+            activeIcon: Badge(
+              isLabelVisible: noLeidas > 0,
+              label: Text(noLeidas > 9 ? '9+' : '$noLeidas'),
+              backgroundColor: AppTheme.rojoError,
+              textStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+              child: const Icon(Icons.home),
+            ),
+            label: t.tr('nav_escritorio'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            activeIcon: Icon(Icons.calendar_today),
-            label: 'Calendario',
+            icon: const Icon(Icons.calendar_today_outlined),
+            activeIcon: const Icon(Icons.calendar_today),
+            label: t.tr('nav_calendario'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined),
-            activeIcon: Icon(Icons.event_note),
-            label: 'Eventos',
+            icon: const Icon(Icons.event_note_outlined),
+            activeIcon: const Icon(Icons.event_note),
+            label: t.tr('nav_eventos'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Perfil',
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
+            label: t.tr('nav_perfil'),
           ),
         ],
       ),

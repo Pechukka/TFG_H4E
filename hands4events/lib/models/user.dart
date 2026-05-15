@@ -12,6 +12,8 @@ class User {
   final String rol; // 'worker' o 'admin'
   final String? avatarUrl;
   final DateTime? createdAt;
+  final DateTime? fechaContratacion;
+  final DateTime? notifMutadaHasta;
 
   User({
     required this.id,
@@ -23,6 +25,8 @@ class User {
     this.rol = 'worker',
     this.avatarUrl,
     this.createdAt,
+    this.fechaContratacion,
+    this.notifMutadaHasta,
   });
 
   // Getter iniciales
@@ -47,6 +51,8 @@ class User {
       rol: data['rol'] ?? 'worker',
       avatarUrl: data['avatarUrl'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      fechaContratacion: (data['fechaContratacion'] as Timestamp?)?.toDate(),
+      notifMutadaHasta: (data['notifMutadaHasta'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -61,6 +67,7 @@ class User {
       'rol': rol,
       'avatarUrl': avatarUrl,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'notifMutadaHasta': notifMutadaHasta != null ? Timestamp.fromDate(notifMutadaHasta!) : null,
     };
   }
 
@@ -75,6 +82,8 @@ class User {
     String? rol,
     String? avatarUrl,
     DateTime? createdAt,
+    DateTime? fechaContratacion,
+    Object? notifMutadaHasta = _sentinel,
   }) {
     return User(
       id: id ?? this.id,
@@ -86,6 +95,12 @@ class User {
       rol: rol ?? this.rol,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
+      fechaContratacion: fechaContratacion ?? this.fechaContratacion,
+      notifMutadaHasta: notifMutadaHasta == _sentinel
+          ? this.notifMutadaHasta
+          : notifMutadaHasta as DateTime?,
     );
   }
 }
+
+const Object _sentinel = Object();

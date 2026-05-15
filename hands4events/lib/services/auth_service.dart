@@ -122,6 +122,8 @@ class AuthService {
     String? telefono,
     String? direccion,
     String? idioma,
+    String? avatarUrl,
+    Object? notifMutadaHasta = _authSentinel,
   }) async {
     if (currentUserId == null) throw 'Usuario no autenticado';
 
@@ -130,6 +132,12 @@ class AuthService {
     if (telefono != null) updates['telefono'] = telefono;
     if (direccion != null) updates['direccion'] = direccion;
     if (idioma != null) updates['idioma'] = idioma;
+    if (avatarUrl != null) updates['avatarUrl'] = avatarUrl;
+    if (notifMutadaHasta != _authSentinel) {
+      updates['notifMutadaHasta'] = notifMutadaHasta == null
+          ? null
+          : Timestamp.fromDate(notifMutadaHasta as DateTime);
+    }
 
     if (updates.isEmpty) return;
 
@@ -206,3 +214,5 @@ class AuthService {
     }
   }
 }
+
+const Object _authSentinel = Object();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/evento.dart';
 import '../services/eventos_service.dart';
@@ -7,44 +8,44 @@ import '../services/eventos_service.dart';
 class EventosProvider with ChangeNotifier {
   final EventosService _eventosService = EventosService();
 
+  StreamSubscription<List<Evento>>? _subscription;
   List<Evento> _eventos = [];
-  Evento? _eventoSeleccionado;
   Map<int, bool> _diasConEventos = {};
   bool _isLoading = false;
   String? _errorMessage;
 
   // Getters
   List<Evento> get eventos => _eventos;
-  Evento? get eventoSeleccionado => _eventoSeleccionado;
   Map<int, bool> get diasConEventos => _diasConEventos;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   /// CARGAR EVENTOS DEL TRABAJADOR
   void cargarEventos(String trabajadorId) {
-    _eventosService.getEventosTrabajador(trabajadorId).listen(
+    _subscription?.cancel();
+    _isLoading = true;
+    notifyListeners();
+    _subscription = _eventosService.getEventosTrabajador(trabajadorId).listen(
       (eventos) {
         _eventos = eventos;
+        _isLoading = false;
         notifyListeners();
       },
       onError: (error) {
         _setError('Error al cargar eventos: $error');
+        _isLoading = false;
+        notifyListeners();
       },
     );
   }
 
   /// OBTENER EVENTO POR ID
-  Future<void> cargarEvento(String eventoId) async {
-    _setLoading(true);
-    _clearError();
-
+  Future<Evento?> fetchEvento(String eventoId) async {
     try {
-      _eventoSeleccionado = await _eventosService.getEvento(eventoId);
-      _setLoading(false);
-      notifyListeners();
+      return await _eventosService.getEvento(eventoId);
     } catch (e) {
       _setError('Error al cargar evento: $e');
-      _setLoading(false);
+      return null;
     }
   }
 
@@ -77,6 +78,8 @@ class EventosProvider with ChangeNotifier {
     int anio,
     int mes,
   ) async {
+    _diasConEventos = {};
+    notifyListeners();
     try {
       _diasConEventos = await _eventosService.getEventosDelMes(
         trabajadorId,
@@ -117,24 +120,7 @@ class EventosProvider with ChangeNotifier {
     return _eventos.where((e) => e.fechaFin.isBefore(DateTime.now())).toList();
   }
 
-  /// SELECCIONAR EVENTO
-  void seleccionarEvento(Evento evento) {
-    _eventoSeleccionado = evento;
-    notifyListeners();
-  }
-
-  /// LIMPIAR SELECCIÓN
-  void limpiarSeleccion() {
-    _eventoSeleccionado = null;
-    notifyListeners();
-  }
-
   // Métodos auxiliares
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
   void _setError(String error) {
     _errorMessage = error;
     notifyListeners();
@@ -147,5 +133,21 @@ class EventosProvider with ChangeNotifier {
   void clearError() {
     _clearError();
     notifyListeners();
+  }
+
+  void reset() {
+    _subscription?.cancel();
+    _subscription = null;
+    _eventos = [];
+    _diasConEventos = {};
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }

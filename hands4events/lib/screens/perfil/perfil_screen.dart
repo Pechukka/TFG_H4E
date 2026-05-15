@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/modals/modal_editar_telefono.dart';
 import '../../widgets/modals/modal_editar_direccion.dart';
 import '../../widgets/modals/modal_seleccionar_idioma.dart';
 import '../../widgets/modals/modal_notificaciones.dart';
+import '../../widgets/modals/modal_seleccionar_avatar.dart';
 import '../nominas/nominas_screen.dart';
 
 /// Pantalla de perfil del usuario
@@ -20,6 +22,15 @@ class PerfilScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const ModalEditarTelefono(),
+    );
+  }
+
+  void _mostrarModalAvatar(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const ModalSeleccionarAvatar(),
     );
   }
 
@@ -59,7 +70,7 @@ class PerfilScreen extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoCerrarSesion(BuildContext context) {
+  void _mostrarDialogoCerrarSesion(BuildContext context, IdiomaProvider t) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -68,11 +79,11 @@ class PerfilScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
-          '¿Cerrar sesión?',
+          t.tr('cerrar_sesion_confirm'),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         content: Text(
-          'Se cerrará tu sesión y volverás a la pantalla de inicio.',
+          t.tr('cerrar_sesion_msg'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.textoSecundario,
               ),
@@ -80,22 +91,21 @@ class PerfilScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(color: AppTheme.textoSecundario),
+            child: Text(
+              t.tr('cancelar'),
+              style: const TextStyle(color: AppTheme.textoSecundario),
             ),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // cerrar diálogo
+              Navigator.pop(context);
               final authProvider =
                   Provider.of<AuthProvider>(context, listen: false);
               await authProvider.logout();
-              // AuthWrapper detecta isAuthenticated=false y navega al Login
             },
-            child: const Text(
-              'Cerrar sesión',
-              style: TextStyle(color: AppTheme.rojoSalir),
+            child: Text(
+              t.tr('cerrar_sesion'),
+              style: const TextStyle(color: AppTheme.rojoSalir),
             ),
           ),
         ],
@@ -105,47 +115,80 @@ class PerfilScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchamos AuthProvider para mostrar datos reales
+    final t = context.watch<IdiomaProvider>();
     final usuario = context.watch<AuthProvider>().currentUser;
 
-    // Valores a mostrar (con fallback si aún no cargó)
     final iniciales = usuario?.iniciales ?? '??';
     final nombre = usuario?.nombre ?? 'Usuario';
     final email = usuario?.email ?? '';
-    final telefono = usuario?.telefono ?? 'No configurado';
-    final direccion = usuario?.direccion ?? 'No configurada';
+    final telefono = usuario?.telefono ?? t.tr('no_configurado');
+    final direccion = usuario?.direccion ?? t.tr('no_configurada');
+    final idiomaNombre = usuario?.idioma == 'en' ? 'English' : 'Español';
 
     return Scaffold(
-      appBar: const AppBarCustom(
+      appBar: AppBarCustom(
         showLogo: true,
         showBackButton: false,
-        title: 'Perfil',
+        title: t.tr('perfil'),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 20),
 
-            // Avatar con iniciales reales
+            // Avatar con botón de edición
             Column(
               children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: AppTheme.verdeNeon.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      iniciales,
-                      style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.verdeNeon,
+                Stack(
+                  children: [
+                    // Círculo del avatar
+                    GestureDetector(
+                      onTap: () => _mostrarModalAvatar(context),
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                        ),
+                        child: ClipOval(
+                          child: usuario?.avatarUrl != null &&
+                                  usuario!.avatarUrl!.isNotEmpty
+                              ? Image.network(
+                                  usuario.avatarUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildIniciales(iniciales),
+                                )
+                              : _buildIniciales(iniciales),
+                        ),
                       ),
                     ),
-                  ),
+                    // Botón lápiz
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: GestureDetector(
+                        onTap: () => _mostrarModalAvatar(context),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: AppTheme.verdeNeon,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppTheme.fondoPrincipal,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: AppTheme.textoSobreVerde,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -170,7 +213,7 @@ class PerfilScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'INFORMACIÓN PERSONAL',
+                  t.tr('informacion_personal'),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppTheme.textoTerciario,
                         letterSpacing: 1.2,
@@ -184,7 +227,7 @@ class PerfilScreen extends StatelessWidget {
             _buildOpcionCard(
               context,
               icono: Icons.phone,
-              titulo: 'Teléfono',
+              titulo: t.tr('telefono'),
               valor: telefono,
               onTap: () => _mostrarModalTelefono(context),
             ),
@@ -192,7 +235,7 @@ class PerfilScreen extends StatelessWidget {
             _buildOpcionCard(
               context,
               icono: Icons.location_on,
-              titulo: 'Dirección',
+              titulo: t.tr('direccion'),
               valor: direccion,
               onTap: () => _mostrarModalDireccion(context),
             ),
@@ -205,7 +248,7 @@ class PerfilScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'CONFIGURACIÓN',
+                  t.tr('configuracion'),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppTheme.textoTerciario,
                         letterSpacing: 1.2,
@@ -219,16 +262,16 @@ class PerfilScreen extends StatelessWidget {
             _buildOpcionCard(
               context,
               icono: Icons.language,
-              titulo: 'Idioma',
-              valor: usuario?.idioma == 'es' ? 'Español' : (usuario?.idioma ?? 'Español'),
+              titulo: t.tr('idioma'),
+              valor: idiomaNombre,
               onTap: () => _mostrarModalIdioma(context),
             ),
 
             _buildOpcionCard(
               context,
               icono: Icons.notifications,
-              titulo: 'Notificaciones',
-              valor: 'Gestionar preferencias',
+              titulo: t.tr('notificaciones_config'),
+              valor: t.tr('gestionar_preferencias'),
               onTap: () => _mostrarModalNotificaciones(context),
             ),
 
@@ -240,7 +283,7 @@ class PerfilScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'OTROS',
+                  t.tr('otros'),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppTheme.textoTerciario,
                         letterSpacing: 1.2,
@@ -254,8 +297,8 @@ class PerfilScreen extends StatelessWidget {
             _buildOpcionCard(
               context,
               icono: Icons.description,
-              titulo: 'Nóminas y vacaciones',
-              valor: 'Ver nóminas y solicitar vacaciones',
+              titulo: t.tr('seccion_nominas'),
+              valor: t.tr('ver_mis_nominas'),
               onTap: () => _navegarANominas(context),
             ),
 
@@ -268,7 +311,7 @@ class PerfilScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: OutlinedButton.icon(
-                  onPressed: () => _mostrarDialogoCerrarSesion(context),
+                  onPressed: () => _mostrarDialogoCerrarSesion(context, t),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.rojoSalir,
                     side: const BorderSide(
@@ -280,9 +323,9 @@ class PerfilScreen extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.logout),
-                  label: const Text(
-                    'Cerrar sesión',
-                    style: TextStyle(
+                  label: Text(
+                    t.tr('cerrar_sesion'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -293,6 +336,22 @@ class PerfilScreen extends StatelessWidget {
 
             const SizedBox(height: 40),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIniciales(String iniciales) {
+    return Container(
+      color: AppTheme.verdeNeon.withValues(alpha: 0.2),
+      child: Center(
+        child: Text(
+          iniciales,
+          style: const TextStyle(
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.verdeNeon,
+          ),
         ),
       ),
     );
@@ -320,7 +379,7 @@ class PerfilScreen extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppTheme.verdeNeon.withOpacity(0.1),
+                color: AppTheme.verdeNeon.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -357,4 +416,5 @@ class PerfilScreen extends StatelessWidget {
       ),
     );
   }
+
 }

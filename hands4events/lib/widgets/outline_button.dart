@@ -37,7 +37,7 @@ class CustomOutlineButton extends StatelessWidget {
           foregroundColor: btnTextColor,
           side: BorderSide(
             color: isLoading
-                ? btnBorderColor.withOpacity(0.5)
+                ? btnBorderColor.withValues(alpha: 0.5)
                 : btnBorderColor,
             width: 2,
           ),

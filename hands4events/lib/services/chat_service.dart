@@ -2,33 +2,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/mensaje.dart';
 import '../core/constants.dart';
 
-/// Servicio de Chat
-/// Mensajería en tiempo real por evento
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// STREAM DE MENSAJES DE UN EVENTO
   Stream<List<Mensaje>> getMensajesEvento(String eventoId) {
     return _firestore
         .collection(AppConstants.colMensajes)
         .where('eventoId', isEqualTo: eventoId)
         .snapshots()
         .map((snapshot) {
-          final mensajes = snapshot.docs
-              .map((doc) => Mensaje.fromFirestore(doc))
-              .toList();
-          // Ordenar por timestamp en Dart (evita índice compuesto en Firestore)
-          mensajes.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-          return mensajes;
-        });
+      final mensajes =
+          snapshot.docs.map((doc) => Mensaje.fromFirestore(doc)).toList();
+      mensajes.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      return mensajes;
+    });
   }
 
-  /// ENVIAR MENSAJE
   Future<void> enviarMensaje({
     required String eventoId,
     required String remitenteId,
     required String remitenteNombre,
     required String texto,
+    String? replyToId,
+    String? replyToNombre,
+    String? replyToTexto,
   }) async {
     final mensaje = Mensaje(
       id: '',
@@ -37,14 +34,15 @@ class ChatService {
       remitenteNombre: remitenteNombre,
       texto: texto.trim(),
       timestamp: DateTime.now(),
+      replyToId: replyToId,
+      replyToNombre: replyToNombre,
+      replyToTexto: replyToTexto,
     );
-
     await _firestore
         .collection(AppConstants.colMensajes)
         .add(mensaje.toFirestore());
   }
 
-  /// ENVIAR MENSAJE CON IMAGEN
   Future<void> enviarMensajeConImagen({
     required String eventoId,
     required String remitenteId,
@@ -59,15 +57,46 @@ class ChatService {
       remitenteNombre: remitenteNombre,
       texto: texto?.trim() ?? '',
       imagenUrl: imagenUrl,
+      tipo: 'imagen',
       timestamp: DateTime.now(),
     );
-
     await _firestore
         .collection(AppConstants.colMensajes)
         .add(mensaje.toFirestore());
   }
 
-  /// MARCAR MENSAJES COMO LEÍDOS
+  Future<void> enviarUbicacion({
+    required String eventoId,
+    required String remitenteId,
+    required String remitenteNombre,
+    required double lat,
+    required double lng,
+  }) async {
+    final mapsUrl = 'https://www.google.com/maps?q=$lat,$lng';
+    final mensaje = Mensaje(
+      id: '',
+      eventoId: eventoId,
+      remitenteId: remitenteId,
+      remitenteNombre: remitenteNombre,
+      texto: mapsUrl,
+      timestamp: DateTime.now(),
+      tipo: 'ubicacion',
+    );
+    await _firestore
+        .collection(AppConstants.colMensajes)
+        .add(mensaje.toFirestore());
+  }
+
+  Future<void> editarMensaje(String mensajeId, String nuevoTexto) async {
+    await _firestore
+        .collection(AppConstants.colMensajes)
+        .doc(mensajeId)
+        .update({
+      'texto': nuevoTexto.trim(),
+      'editado': true,
+    });
+  }
+
   Future<void> marcarMensajesLeidos(String eventoId, String userId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colMensajes)
@@ -83,7 +112,6 @@ class ChatService {
     await batch.commit();
   }
 
-  /// CONTAR MENSAJES NO LEÍDOS
   Future<int> contarMensajesNoLeidos(String eventoId, String userId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colMensajes)
@@ -91,11 +119,9 @@ class ChatService {
         .where('remitenteId', isNotEqualTo: userId)
         .where('leido', isEqualTo: false)
         .get();
-
     return snapshot.docs.length;
   }
 
-  /// ELIMINAR MENSAJE
   Future<void> eliminarMensaje(String mensajeId) async {
     await _firestore
         .collection(AppConstants.colMensajes)

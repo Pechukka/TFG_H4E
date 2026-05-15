@@ -60,15 +60,15 @@ class EventosService {
     final inicio = DateTime(fecha.year, fecha.month, fecha.day);
     final fin = inicio.add(const Duration(days: 1));
 
+    // Filtramos en Dart para evitar índice compuesto en Firestore
     final snapshot = await _firestore
         .collection(AppConstants.colEventos)
         .where('trabajadoresIds', arrayContains: trabajadorId)
-        .where('fechaInicio', isGreaterThanOrEqualTo: Timestamp.fromDate(inicio))
-        .where('fechaInicio', isLessThan: Timestamp.fromDate(fin))
         .get();
 
     return snapshot.docs
         .map((doc) => Evento.fromFirestore(doc))
+        .where((e) => !e.fechaInicio.isBefore(inicio) && e.fechaInicio.isBefore(fin))
         .toList();
   }
 
@@ -81,20 +81,19 @@ class EventosService {
     final inicio = DateTime(anio, mes, 1);
     final fin = DateTime(anio, mes + 1, 1);
 
+    // Filtramos en Dart para evitar índice compuesto en Firestore
     final snapshot = await _firestore
         .collection(AppConstants.colEventos)
         .where('trabajadoresIds', arrayContains: trabajadorId)
-        .where('fechaInicio', isGreaterThanOrEqualTo: Timestamp.fromDate(inicio))
-        .where('fechaInicio', isLessThan: Timestamp.fromDate(fin))
         .get();
 
-    // Mapa de día -> tiene evento
     final Map<int, bool> diasConEventos = {};
     for (var doc in snapshot.docs) {
       final evento = Evento.fromFirestore(doc);
-      diasConEventos[evento.fechaInicio.day] = true;
+      if (!evento.fechaInicio.isBefore(inicio) && evento.fechaInicio.isBefore(fin)) {
+        diasConEventos[evento.fechaInicio.day] = true;
+      }
     }
-
     return diasConEventos;
   }
 
