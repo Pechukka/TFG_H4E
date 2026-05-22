@@ -17,6 +17,7 @@ class DisponibilidadProvider with ChangeNotifier {
     required TimeOfDay horaInicio,
     required TimeOfDay horaFin,
     bool aplicarRecurrente = false,
+    String? existingId,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -28,6 +29,7 @@ class DisponibilidadProvider with ChangeNotifier {
         horaInicio: horaInicio,
         horaFin: horaFin,
         aplicarRecurrente: aplicarRecurrente,
+        existingId: existingId,
       );
       _isLoading = false;
       notifyListeners();

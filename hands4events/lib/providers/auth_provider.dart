@@ -1,45 +1,55 @@
-import 'dart:io';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
-import '../services/storage_service.dart';
 
-/// Provider de Autenticación
-/// Gestiona el estado de autenticación del usuario
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
 
   User? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  StreamSubscription<DocumentSnapshot>? _userDocSub;
 
-  // Getters
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _currentUser != null;
   String? get currentUserId => _currentUser?.id;
 
-  /// INICIALIZAR - Verificar si hay usuario logueado
   Future<void> initialize() async {
     _setLoading(true);
-    
+
     final firebaseUser = _authService.currentFirebaseUser;
     if (firebaseUser != null) {
       _currentUser = await _authService.getUserData(firebaseUser.uid);
+      if (_currentUser != null) _listenToUserDoc(firebaseUser.uid);
       notifyListeners();
     }
-    
+
     _setLoading(false);
   }
 
-  /// LOGIN
+  // Si el admin elimina al usuario, lo expulsa al login en tiempo real
+  void _listenToUserDoc(String uid) {
+    _userDocSub?.cancel();
+    _userDocSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snap) {
+      if (!snap.exists) logout();
+    });
+  }
+
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     _clearError();
 
     try {
       _currentUser = await _authService.login(email, password);
+      if (_currentUser != null) _listenToUserDoc(_currentUser!.id);
       _setLoading(false);
       notifyListeners();
       return _currentUser != null;
@@ -50,35 +60,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// REGISTRO
-  Future<bool> register({
-    required String email,
-    required String password,
-    required String nombre,
-    String? telefono,
-  }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      _currentUser = await _authService.register(
-        email: email,
-        password: password,
-        nombre: nombre,
-        telefono: telefono,
-      );
-      _setLoading(false);
-      notifyListeners();
-      return _currentUser != null;
-    } catch (e) {
-      _setError(e.toString());
-      _setLoading(false);
-      return false;
-    }
-  }
-
-  /// LOGOUT
   Future<void> logout() async {
+    _userDocSub?.cancel();
+    _userDocSub = null;
     _setLoading(true);
     await _authService.logout();
     _currentUser = null;
@@ -86,7 +70,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ACTUALIZAR PERFIL
   Future<bool> updateProfile({
     String? nombre,
     String? telefono,
@@ -126,12 +109,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// ACTUALIZAR MUTE DE NOTIFICACIONES
-  Future<bool> actualizarNotificacionesMute(DateTime? mutadaHasta) async {
+  Future<bool> actualizarNotificaciones(bool activadas) async {
     if (_currentUser == null) return false;
     try {
-      await _authService.updateProfile(notifMutadaHasta: mutadaHasta);
-      _currentUser = _currentUser!.copyWith(notifMutadaHasta: mutadaHasta);
+      await _authService.updateProfile(notifActivadas: activadas);
+      _currentUser = _currentUser!.copyWith(notifActivadas: activadas);
       notifyListeners();
       return true;
     } catch (e) {
@@ -139,26 +121,29 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// GETTERS ESTADO NOTIFICACIONES
-  bool get notifDesactivadas {
-    final hasta = _currentUser?.notifMutadaHasta;
-    if (hasta == null) return false;
-    return hasta.year >= 2100;
+  bool get notifDesactivadas => !(_currentUser?.notifActivadas ?? true);
+
+  Future<bool> updatePasswordDirect(String newPassword) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authService.updatePasswordDirect(newPassword);
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
   }
 
-  bool get notifSilenciadas {
-    final hasta = _currentUser?.notifMutadaHasta;
-    if (hasta == null) return false;
-    if (hasta.year >= 2100) return false;
-    return hasta.isAfter(DateTime.now());
+  Future<void> marcarPasswordReinicializada() async {
+    if (_currentUser == null) return;
+    await _authService.updateProfileRaw({'debeReiniciarPassword': false});
+    _currentUser = _currentUser!.copyWith(debeReiniciarPassword: false);
+    notifyListeners();
   }
 
-  /// VERIFICAR SI UN EMAIL EXISTE EN FIRESTORE
-  Future<bool> emailExisteEnFirestore(String email) async {
-    return await _authService.emailExisteEnFirestore(email);
-  }
-
-  /// RECUPERAR CONTRASEÑA
   Future<bool> resetPassword(String email) async {
     _setLoading(true);
     _clearError();
@@ -174,49 +159,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// CAMBIAR CONTRASEÑA
-  Future<bool> changePassword(String currentPassword, String newPassword) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      await _authService.changePassword(currentPassword, newPassword);
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setError(e.toString());
-      _setLoading(false);
-      return false;
-    }
-  }
-
-  /// SUBIR IMAGEN Y ACTUALIZAR AVATAR
-  Future<bool> subirYActualizarAvatar(File imagen) async {
-    if (_currentUser == null) return false;
-    _setLoading(true);
-    _clearError();
-    try {
-      final url = await StorageService().subirAvatar(imagen, _currentUser!.id);
-      return await updateProfile(avatarUrl: url);
-    } catch (e) {
-      _setError(e.toString());
-      _setLoading(false);
-      return false;
-    }
-  }
-
-  /// RECARGAR DATOS DEL USUARIO
-  Future<void> reloadUserData() async {
-    if (_currentUser == null) return;
-
-    final updatedUser = await _authService.getUserData(_currentUser!.id);
-    if (updatedUser != null) {
-      _currentUser = updatedUser;
-      notifyListeners();
-    }
-  }
-
-  // Métodos auxiliares
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
@@ -231,7 +173,6 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
   }
 
-  /// Limpiar mensaje de error manualmente
   void clearError() {
     _clearError();
     notifyListeners();

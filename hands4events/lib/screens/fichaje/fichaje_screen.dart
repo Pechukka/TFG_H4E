@@ -8,6 +8,7 @@ import '../../providers/idioma_provider.dart';
 import '../../models/fichaje.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
+import '../../utils/top_snackbar.dart';
 import '../../widgets/outline_button.dart';
 
 class FichajeScreen extends StatefulWidget {
@@ -80,13 +81,8 @@ class _FichajeScreenState extends State<FichajeScreen> {
     if (mounted) {
       if (exito) {
         _iniciarTimerUI();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(t.tr('fichaje_iniciado')),
-            backgroundColor: AppTheme.verdeNeon.withValues(alpha: 0.9),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showTopSnackBar(context, t.tr('fichaje_iniciado'),
+            backgroundColor: AppTheme.verdeNeon, icon: Icons.login);
       } else {
         _mostrarError(provider.errorMessage ?? t.tr('error_fichar_entrada'));
         provider.clearError();
@@ -136,13 +132,8 @@ class _FichajeScreenState extends State<FichajeScreen> {
         if (userId != null && widget.eventoId.isNotEmpty) {
           provider.cargarHistorial(userId, widget.eventoId);
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(t.tr('fichaje_finalizado_ok')),
-            backgroundColor: AppTheme.verdeNeon.withValues(alpha: 0.9),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showTopSnackBar(context, t.tr('fichaje_finalizado_ok'),
+            backgroundColor: AppTheme.verdeNeon, icon: Icons.logout);
       } else {
         _mostrarError(provider.errorMessage ?? t.tr('error_fichar_salida'));
         provider.clearError();
@@ -151,13 +142,8 @@ class _FichajeScreenState extends State<FichajeScreen> {
   }
 
   void _mostrarError(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: AppTheme.rojoError,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    showTopSnackBar(context, mensaje,
+        backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
   }
 
   // ─── Restricciones de fichaje ──────────────────────────────────────────────

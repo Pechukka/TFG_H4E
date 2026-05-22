@@ -1,16 +1,11 @@
 class AppConstants {
-  // Google Maps API Key — reemplazar con la tuya en Google Cloud Console
-  // (Maps SDK for Android + Places API habilitados)
   static const String googleMapsApiKey = 'AIzaSyDSmbT8xDTvuonInBdCxAqdxuPu_7uOs3Y';
 
-  // Google Cloud Translation API Key — habilitar "Cloud Translation API" en Google Cloud Console
-  // Puede usar la misma clave que Maps si tiene permisos suficientes
-  static const String googleTranslationApiKey = 'AIzaSyDSmbT8xDTvuonInBdCxAqdxuPu_7uOs3Y';
   // Roles
   static const String rolWorker = 'worker';
   static const String rolAdmin = 'admin';
 
-  // Firebase Collections
+  // Colecciones Firestore
   static const String colUsers = 'users';
   static const String colEventos = 'eventos';
   static const String colFichajes = 'fichajes';
@@ -18,19 +13,12 @@ class AppConstants {
   static const String colMensajes = 'mensajes';
   static const String colNominas = 'nominas';
 
-  // Storage Paths
+  // Rutas de Storage
   static const String storageNominas = 'nominas';
-  static const String storageAvatars = 'avatars';
   static const String storageChatImages = 'chat_images';
 
-  // Validaciones
   static const int minPasswordLength = 6;
-  static const int phoneLength = 9;
-  
-  // Límites
-  static const int maxChatImageSize = 5 * 1024 * 1024; // 5MB
-  static const int maxAvatarSize = 2 * 1024 * 1024; // 2MB
-  
+
   // Días de la semana
   static const List<String> diasSemana = [
     '',

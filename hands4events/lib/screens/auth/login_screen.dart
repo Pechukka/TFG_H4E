@@ -6,6 +6,7 @@ import '../../providers/idioma_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
 import 'recuperar_password_screen.dart';
+import '../../utils/top_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,22 +44,13 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
 
         if (exito) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(t.tr('bienvenido')),
-              backgroundColor: AppTheme.verdeNeon.withValues(alpha: 0.9),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          showTopSnackBar(context, t.tr('bienvenido'),
+              backgroundColor: AppTheme.verdeNeon,
+              icon: Icons.check_circle_outline);
         } else {
           final error = authProvider.errorMessage ?? '';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_traducirError(error, t)),
-              backgroundColor: AppTheme.rojoError,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          showTopSnackBar(context, _traducirError(error, t),
+              backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
           authProvider.clearError();
         }
       }

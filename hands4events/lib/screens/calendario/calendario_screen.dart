@@ -342,10 +342,12 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
               if (_eventosDelDia.isNotEmpty)
                 ..._eventosDelDia.map((evento) {
+                  final si = evento.fechaInicio;
+                  final sf = evento.fechaFin;
                   final horaI =
-                      '${evento.fechaInicio.hour.toString().padLeft(2, '0')}:${evento.fechaInicio.minute.toString().padLeft(2, '0')}';
+                      '${si.hour.toString().padLeft(2, '0')}:${si.minute.toString().padLeft(2, '0')}';
                   final horaF =
-                      '${evento.fechaFin.hour.toString().padLeft(2, '0')}:${evento.fechaFin.minute.toString().padLeft(2, '0')}';
+                      '${sf.hour.toString().padLeft(2, '0')}:${sf.minute.toString().padLeft(2, '0')}';
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: InkWell(

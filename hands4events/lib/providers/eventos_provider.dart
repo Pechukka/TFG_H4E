@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../models/evento.dart';
 import '../services/eventos_service.dart';
 
-/// Provider de Eventos
-/// Gestiona el estado de eventos del trabajador
 class EventosProvider with ChangeNotifier {
   final EventosService _eventosService = EventosService();
 
@@ -14,13 +12,11 @@ class EventosProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getters
   List<Evento> get eventos => _eventos;
   Map<int, bool> get diasConEventos => _diasConEventos;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// CARGAR EVENTOS DEL TRABAJADOR
   void cargarEventos(String trabajadorId) {
     _subscription?.cancel();
     _isLoading = true;
@@ -39,7 +35,6 @@ class EventosProvider with ChangeNotifier {
     );
   }
 
-  /// OBTENER EVENTO POR ID
   Future<Evento?> fetchEvento(String eventoId) async {
     try {
       return await _eventosService.getEvento(eventoId);
@@ -49,7 +44,6 @@ class EventosProvider with ChangeNotifier {
     }
   }
 
-  /// OBTENER EVENTOS FUTUROS
   Future<List<Evento>> getEventosFuturos(String trabajadorId) async {
     try {
       return await _eventosService.getEventosFuturos(trabajadorId);
@@ -59,7 +53,6 @@ class EventosProvider with ChangeNotifier {
     }
   }
 
-  /// OBTENER EVENTOS POR FECHA
   Future<List<Evento>> getEventosPorFecha(
     String trabajadorId,
     DateTime fecha,
@@ -72,7 +65,6 @@ class EventosProvider with ChangeNotifier {
     }
   }
 
-  /// CARGAR EVENTOS DEL MES (para calendario)
   Future<void> cargarEventosDelMes(
     String trabajadorId,
     int anio,
@@ -92,12 +84,10 @@ class EventosProvider with ChangeNotifier {
     }
   }
 
-  /// VERIFICAR SI HAY EVENTO EN UN DÍA
   bool tieneEventoEnDia(int dia) {
     return _diasConEventos[dia] ?? false;
   }
 
-  /// OBTENER EQUIPO DEL EVENTO
   Future<List<Map<String, dynamic>>> getEquipoEvento(String eventoId) async {
     try {
       return await _eventosService.getEquipoEvento(eventoId);
@@ -107,7 +97,6 @@ class EventosProvider with ChangeNotifier {
     }
   }
 
-  /// FILTRAR EVENTOS POR ESTADO
   List<Evento> get eventosFuturos {
     return _eventos.where((e) => e.fechaInicio.isAfter(DateTime.now())).toList();
   }
@@ -120,7 +109,6 @@ class EventosProvider with ChangeNotifier {
     return _eventos.where((e) => e.fechaFin.isBefore(DateTime.now())).toList();
   }
 
-  // Métodos auxiliares
   void _setError(String error) {
     _errorMessage = error;
     notifyListeners();

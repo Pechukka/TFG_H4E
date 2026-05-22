@@ -10,6 +10,9 @@ class Evento {
   final double cobroPorHora;
   final String rolAsignado;
   final List<String> trabajadoresIds;
+  // Mapa que guarda el rol de cada trabajador: {uid: nombreRol}
+  // Solo lo usa el panel de admin — la app worker lo ignora
+  final Map<String, String> trabajadoresRoles;
 
   Evento({
     required this.id,
@@ -21,9 +24,9 @@ class Evento {
     required this.cobroPorHora,
     required this.rolAsignado,
     this.trabajadoresIds = const [],
+    this.trabajadoresRoles = const {},
   });
 
-  // Getters
   String get fechaFormateada {
     return '${fechaInicio.day}/${fechaInicio.month}/${fechaInicio.year}';
   }
@@ -58,6 +61,7 @@ class Evento {
       cobroPorHora: (data['cobroPorHora'] ?? 0).toDouble(),
       rolAsignado: data['rolAsignado'] ?? '',
       trabajadoresIds: List<String>.from(data['trabajadoresIds'] ?? []),
+      trabajadoresRoles: Map<String, String>.from(data['trabajadoresRoles'] ?? {}),
     );
   }
 
@@ -72,6 +76,7 @@ class Evento {
       'cobroPorHora': cobroPorHora,
       'rolAsignado': rolAsignado,
       'trabajadoresIds': trabajadoresIds,
+      'trabajadoresRoles': trabajadoresRoles,
     };
   }
 }

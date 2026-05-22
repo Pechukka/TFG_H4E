@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-/// Modelo de Disponibilidad Horaria
-/// Gestiona los horarios en que un trabajador está disponible
 class Disponibilidad {
   final String id;
   final String trabajadorId;
@@ -24,7 +22,6 @@ class Disponibilidad {
     this.createdAt,
   });
 
-  // Getters formateados
   String get horaInicioFormateada {
     return '${horaInicio.hour.toString().padLeft(2, '0')}:${horaInicio.minute.toString().padLeft(2, '0')}';
   }
@@ -37,7 +34,6 @@ class Disponibilidad {
     return '$horaInicioFormateada - $horaFinFormateada';
   }
 
-  // Nombre del día de la semana
   String get nombreDiaSemana {
     if (diaSemana == null) return '';
     const dias = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -87,7 +83,6 @@ class Disponibilidad {
     };
   }
 
-  // CopyWith
   Disponibilidad copyWith({
     String? id,
     String? trabajadorId,

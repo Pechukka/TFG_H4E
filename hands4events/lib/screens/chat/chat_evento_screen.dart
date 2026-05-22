@@ -9,7 +9,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/idioma_provider.dart';
 import '../../models/mensaje.dart';
-import '../../services/translation_service.dart';
 import '../../widgets/app_bar_custom.dart';
 import 'equipo_evento_screen.dart';
 import 'seleccionar_ubicacion_screen.dart';
@@ -32,16 +31,9 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
-  final TranslationService _translationService = TranslationService();
-
   // Estado de respuesta / edición
   Mensaje? _replyingTo;
   Mensaje? _editandoMensaje;
-
-  // Estado de traducción
-  bool _traducirActivo = false;
-  bool _traduciendo = false;
-  final Map<String, String> _traducciones = {};
 
   @override
   void initState() {
@@ -333,66 +325,6 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
     _scrollToBottom();
   }
 
-  // ── Traducción ──────────────────────────────────────────────────────────────
-
-  Future<void> _toggleTraduccion(
-      List<Mensaje> mensajes, String lang) async {
-    if (_traducirActivo) {
-      setState(() => _traducirActivo = false);
-      return;
-    }
-
-    setState(() {
-      _traducirActivo = true;
-      _traduciendo = true;
-    });
-
-    final toTranslate = <String>[];
-    final toTranslateIds = <String>[];
-
-    for (final m in mensajes) {
-      if (m.tipo != 'ubicacion' &&
-          m.texto.isNotEmpty &&
-          !_traducciones.containsKey(m.id)) {
-        toTranslate.add(m.texto);
-        toTranslateIds.add(m.id);
-      }
-    }
-
-    if (toTranslate.isNotEmpty) {
-      try {
-        final translated =
-            await _translationService.traducirLote(toTranslate, lang);
-        if (translated != null && mounted) {
-          setState(() {
-            for (int i = 0; i < toTranslateIds.length; i++) {
-              _traducciones[toTranslateIds[i]] = translated[i];
-            }
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _traducirActivo = false;
-            _traduciendo = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  '${context.read<IdiomaProvider>().tr('error_traduccion')}\n$e'),
-              backgroundColor: AppTheme.rojoError,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 8),
-            ),
-          );
-          return;
-        }
-      }
-    }
-
-    if (mounted) setState(() => _traduciendo = false);
-  }
-
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   void _scrollToBottom() {
@@ -470,33 +402,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
         showBackButton: true,
         title: widget.tituloEvento,
         subtitle: t.tr('chat_subtitulo'),
-        actions: [
-          if (_traduciendo)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.verdeNeon,
-                  ),
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: Icon(
-                Icons.translate,
-                color: _traducirActivo
-                    ? AppTheme.verdeNeon
-                    : AppTheme.textoSecundario,
-              ),
-              tooltip: t.tr('traducir_mensajes'),
-              onPressed: () => _toggleTraduccion(mensajes, t.idioma),
-            ),
-        ],
+        actions: const [],
       ),
       body: Column(
         children: [
@@ -991,10 +897,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                     ),
                   ] else if (mensaje.texto.isNotEmpty) ...[
                     Text(
-                      (_traducirActivo &&
-                              _traducciones.containsKey(mensaje.id))
-                          ? _traducciones[mensaje.id]!
-                          : mensaje.texto,
+                      mensaje.texto,
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
@@ -1002,7 +905,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                     ),
                   ],
 
-                  // Pie: hora + editado + traducido
+                  // Pie: hora + editado
                   const SizedBox(height: 2),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1021,11 +924,6 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
                           ),
                         ),
                       ],
-                      if (_traducirActivo &&
-                          _traducciones.containsKey(mensaje.id))
-                        Text(' · 🌐',
-                            style:
-                                TextStyle(color: metaColor, fontSize: 10)),
                     ],
                   ),
                 ],

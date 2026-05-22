@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hands4events/core/theme.dart';
 
-/// Botón principal verde neón de la aplicación
-/// Usado para acciones primarias (Iniciar sesión, Guardar, etc.)
 class PrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;

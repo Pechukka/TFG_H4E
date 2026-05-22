@@ -6,6 +6,7 @@ import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
+import '../../utils/top_snackbar.dart';
 
 class RecuperarPasswordScreen extends StatefulWidget {
   const RecuperarPasswordScreen({super.key});
@@ -33,20 +34,6 @@ class _RecuperarPasswordScreenState extends State<RecuperarPasswordScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final email = _emailController.text.trim();
 
-      final existe = await authProvider.emailExisteEnFirestore(email);
-
-      if (mounted && !existe) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(t.tr('correo_no_registrado')),
-            backgroundColor: AppTheme.rojoError,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-
       final exito = await authProvider.resetPassword(email);
 
       if (mounted) {
@@ -59,13 +46,8 @@ class _RecuperarPasswordScreenState extends State<RecuperarPasswordScreen> {
           });
         } else {
           final error = authProvider.errorMessage ?? '';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_traducirError(error, t)),
-              backgroundColor: AppTheme.rojoError,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          showTopSnackBar(context, _traducirError(error, t),
+              backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
           authProvider.clearError();
         }
       }

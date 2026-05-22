@@ -39,6 +39,10 @@ dependencies:
   # Image picker (galería/cámara para avatar y chat)
   image_picker: ^1.1.2
 
+  # PDF generation (tickets de credenciales y nóminas)
+  pdf: ^3.11.1
+  printing: ^5.13.2
+
   # Utilities
   intl: ^0.20.2
   path: ^1.9.0

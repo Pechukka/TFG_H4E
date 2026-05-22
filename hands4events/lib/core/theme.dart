@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Tema de la aplicación Hands4Events
-/// Paleta de colores corporativa verde oscuro fosforescente
 class AppTheme {
   // ==================== COLORES BASE ====================
   

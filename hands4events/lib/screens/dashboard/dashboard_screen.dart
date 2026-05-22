@@ -119,6 +119,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
         break;
 
+      case TipoNotificacion.recordatorio:
+        final eventoIdRecordatorio = notif.datos?['eventoId'];
+        if (eventoIdRecordatorio != null) {
+          final evento = await context.read<EventosProvider>().fetchEvento(eventoIdRecordatorio);
+          if (mounted && evento != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleEventoScreen(evento: evento),
+              ),
+            );
+          }
+        }
+        break;
+
+      case TipoNotificacion.eventoCancelado:
+        // El evento ya no existe — solo marcar como leída
+        break;
+
       case TipoNotificacion.sistema:
         break;
     }
@@ -269,6 +288,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context,
                     notificacion: notif,
                     onTap: () => _navegarNotificacion(notif),
+                    onDismiss: () => context
+                        .read<NotificacionesProvider>()
+                        .eliminarNotificacion(notif.id),
                   )),
             const SizedBox(height: 24),
           ],
@@ -389,6 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     BuildContext context, {
     required Notificacion notificacion,
     required VoidCallback onTap,
+    required VoidCallback onDismiss,
   }) {
     IconData icono;
     switch (notificacion.tipo) {
@@ -401,65 +424,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case TipoNotificacion.nominaPublicada:
         icono = Icons.description;
         break;
+      case TipoNotificacion.recordatorio:
+        icono = Icons.alarm;
+        break;
+      case TipoNotificacion.eventoCancelado:
+        icono = Icons.event_busy;
+        break;
+      case TipoNotificacion.cambioEvento:
+        icono = Icons.edit_calendar;
+        break;
       default:
         icono = Icons.notifications;
     }
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
+    final dismissBackground = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      alignment: Alignment.centerLeft,
+      child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+    );
+
+    return Dismissible(
+      key: Key(notificacion.id),
+      direction: DismissDirection.horizontal,
+      background: dismissBackground,
+      secondaryBackground: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.fondoCard,
+          color: Colors.red.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(12),
-          border: notificacion.leida
-              ? null
-              : Border.all(
-                  color: AppTheme.verdeNeon.withValues(alpha: 0.3), width: 1),
         ),
-        child: Row(
-          children: [
-            Icon(
-              icono,
-              color: AppTheme.verdeNeon,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    notificacion.titulo,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: notificacion.leida
-                              ? FontWeight.normal
-                              : FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    notificacion.mensaje,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textoSecundario,
-                        ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            if (!notificacion.leida)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppTheme.verdeNeon,
-                  shape: BoxShape.circle,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.centerRight,
+        child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+      ),
+      onDismissed: (_) => onDismiss(),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.fondoCard,
+            borderRadius: BorderRadius.circular(12),
+            border: notificacion.leida
+                ? null
+                : Border.all(
+                    color: AppTheme.verdeNeon.withValues(alpha: 0.3), width: 1),
+          ),
+          child: Row(
+            children: [
+              Icon(icono, color: AppTheme.verdeNeon, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notificacion.titulo,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: notificacion.leida
+                                ? FontWeight.normal
+                                : FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      notificacion.mensaje,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textoSecundario,
+                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-          ],
+              if (!notificacion.leida)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.verdeNeon,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

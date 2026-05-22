@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Modelo de Usuario
-/// Combina entidad de dominio + DTO para simplificar
 class User {
   final String id;
   final String nombre;
@@ -13,7 +11,8 @@ class User {
   final String? avatarUrl;
   final DateTime? createdAt;
   final DateTime? fechaContratacion;
-  final DateTime? notifMutadaHasta;
+  final bool notifActivadas;
+  final bool debeReiniciarPassword;
 
   User({
     required this.id,
@@ -26,7 +25,8 @@ class User {
     this.avatarUrl,
     this.createdAt,
     this.fechaContratacion,
-    this.notifMutadaHasta,
+    this.notifActivadas = true,
+    this.debeReiniciarPassword = false,
   });
 
   // Getter iniciales
@@ -52,7 +52,8 @@ class User {
       avatarUrl: data['avatarUrl'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       fechaContratacion: (data['fechaContratacion'] as Timestamp?)?.toDate(),
-      notifMutadaHasta: (data['notifMutadaHasta'] as Timestamp?)?.toDate(),
+      notifActivadas: data['notifActivadas'] as bool? ?? true,
+      debeReiniciarPassword: data['debeReiniciarPassword'] as bool? ?? false,
     );
   }
 
@@ -67,11 +68,11 @@ class User {
       'rol': rol,
       'avatarUrl': avatarUrl,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
-      'notifMutadaHasta': notifMutadaHasta != null ? Timestamp.fromDate(notifMutadaHasta!) : null,
+      'notifActivadas': notifActivadas,
+      'debeReiniciarPassword': debeReiniciarPassword,
     };
   }
 
-  // CopyWith
   User copyWith({
     String? id,
     String? nombre,
@@ -83,7 +84,8 @@ class User {
     String? avatarUrl,
     DateTime? createdAt,
     DateTime? fechaContratacion,
-    Object? notifMutadaHasta = _sentinel,
+    bool? notifActivadas,
+    bool? debeReiniciarPassword,
   }) {
     return User(
       id: id ?? this.id,
@@ -96,11 +98,8 @@ class User {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
       fechaContratacion: fechaContratacion ?? this.fechaContratacion,
-      notifMutadaHasta: notifMutadaHasta == _sentinel
-          ? this.notifMutadaHasta
-          : notifMutadaHasta as DateTime?,
+      notifActivadas: notifActivadas ?? this.notifActivadas,
+      debeReiniciarPassword: debeReiniciarPassword ?? this.debeReiniciarPassword,
     );
   }
 }
-
-const Object _sentinel = Object();

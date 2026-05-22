@@ -5,6 +5,7 @@ import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/idioma_provider.dart';
 import 'modal_base.dart';
+import '../../utils/top_snackbar.dart';
 
 class ModalEditarTelefono extends StatefulWidget {
   const ModalEditarTelefono({super.key});
@@ -34,13 +35,8 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
   Future<void> _guardar(IdiomaProvider t) async {
     final numero = _telefonoController.text.replaceAll(' ', '');
     if (numero.length != 9) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(t.tr('telefono_digitos_error')),
-          backgroundColor: AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showTopSnackBar(context, t.tr('telefono_digitos_error'),
+          backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       return;
     }
 
@@ -52,14 +48,11 @@ class _ModalEditarTelefonoState extends State<ModalEditarTelefono> {
     if (mounted) {
       setState(() => _isLoading = false);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(exito
-              ? t.tr('telefono_actualizado')
-              : t.tr('error_actualizar_telefono')),
-          backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showTopSnackBar(
+        context,
+        exito ? t.tr('telefono_actualizado') : t.tr('error_actualizar_telefono'),
+        backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
+        icon: exito ? Icons.check_circle_outline : Icons.error_outline,
       );
     }
   }

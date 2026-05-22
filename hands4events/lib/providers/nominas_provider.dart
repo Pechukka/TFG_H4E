@@ -17,7 +17,6 @@ class NominasProvider with ChangeNotifier {
   bool get estaInicializado => _estaInicializado;
   String? get errorMessage => _errorMessage;
 
-  /// Última nómina disponible (la más reciente)
   Nomina? get ultimaNomina => _nominas.isNotEmpty ? _nominas.first : null;
 
   void cargarNominas(String trabajadorId) {

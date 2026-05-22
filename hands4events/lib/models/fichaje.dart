@@ -21,7 +21,6 @@ class Fichaje {
     this.estado = FichajeEstado.noIniciado,
   });
 
-  // Getter tiempo total
   Duration get tiempoTotal {
     if (entrada == null) return Duration.zero;
     
@@ -77,7 +76,6 @@ class Fichaje {
     };
   }
 
-  // CopyWith
   Fichaje copyWith({
     String? id,
     String? trabajadorId,

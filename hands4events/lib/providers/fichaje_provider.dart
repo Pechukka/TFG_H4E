@@ -4,8 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import '../models/fichaje.dart';
 import '../services/fichajes_service.dart';
 
-/// Provider de Fichaje
-/// Gestiona el estado del fichaje activo y cronómetro
 class FichajeProvider with ChangeNotifier {
   final FichajesService _fichajesService = FichajesService();
 
@@ -15,14 +13,12 @@ class FichajeProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getters
   Fichaje? get fichajeActivo => _fichajeActivo;
   List<Fichaje> get historial => _historial;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get tieneFichajeActivo => _fichajeActivo != null;
 
-  /// CARGAR FICHAJE ACTIVO
   Future<void> cargarFichajeActivo(String trabajadorId, String eventoId) async {
     // Limpiar estado del evento anterior antes de cargar el nuevo
     _fichajeActivo = null;
@@ -47,20 +43,20 @@ class FichajeProvider with ChangeNotifier {
     }
   }
 
-  /// FICHAR ENTRADA
+  Future<Position?> _intentarObtenerUbicacion() async {
+    try {
+      return await _fichajesService.obtenerUbicacion();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> ficharEntrada(String trabajadorId, String eventoId) async {
     _setLoading(true);
     _clearError();
 
     try {
-      // Obtener ubicación GPS
-      Position? ubicacion;
-      try {
-        ubicacion = await _fichajesService.obtenerUbicacion();
-      } catch (e) {
-        // Continuar sin GPS si falla
-        // GPS unavailable — continue without location
-      }
+      final ubicacion = await _intentarObtenerUbicacion();
 
       _fichajeActivo = await _fichajesService.ficharEntrada(
         trabajadorId: trabajadorId,
@@ -79,7 +75,6 @@ class FichajeProvider with ChangeNotifier {
     }
   }
 
-  /// FICHAR SALIDA
   Future<bool> ficharSalida() async {
     if (_fichajeActivo == null) return false;
 
@@ -87,13 +82,7 @@ class FichajeProvider with ChangeNotifier {
     _clearError();
 
     try {
-      // Obtener ubicación GPS
-      Position? ubicacion;
-      try {
-        ubicacion = await _fichajesService.obtenerUbicacion();
-      } catch (e) {
-        // GPS unavailable — continue without location
-      }
+      final ubicacion = await _intentarObtenerUbicacion();
 
       await _fichajesService.ficharSalida(
         fichajeId: _fichajeActivo!.id,
@@ -112,7 +101,6 @@ class FichajeProvider with ChangeNotifier {
     }
   }
 
-  /// PAUSAR FICHAJE
   Future<bool> pausarFichaje() async {
     if (_fichajeActivo == null) return false;
 
@@ -136,7 +124,6 @@ class FichajeProvider with ChangeNotifier {
     }
   }
 
-  /// REANUDAR FICHAJE
   Future<bool> reanudarFichaje() async {
     if (_fichajeActivo == null) return false;
 
@@ -160,7 +147,6 @@ class FichajeProvider with ChangeNotifier {
     }
   }
 
-  /// CARGAR HISTORIAL DE FICHAJES FINALIZADOS
   Future<void> cargarHistorial(String trabajadorId, String eventoId) async {
     try {
       _historial = await _fichajesService.getFichajesEvento(trabajadorId, eventoId);
@@ -168,13 +154,9 @@ class FichajeProvider with ChangeNotifier {
     } catch (_) {}
   }
 
-  /// CRONÓMETRO
   void _iniciarCronometro() {
-    _detenerCronometro(); // Detener cronómetro anterior si existe
-    
-    _cronometro = Timer.periodic(const Duration(seconds: 1), (timer) {
-      notifyListeners(); // Actualiza el tiempoTotal cada segundo
-    });
+    _detenerCronometro();
+    _cronometro = Timer.periodic(const Duration(seconds: 1), (_) => notifyListeners());
   }
 
   void _detenerCronometro() {
@@ -182,7 +164,6 @@ class FichajeProvider with ChangeNotifier {
     _cronometro = null;
   }
 
-  // Métodos auxiliares
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

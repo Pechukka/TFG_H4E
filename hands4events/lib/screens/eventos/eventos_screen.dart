@@ -8,8 +8,6 @@ import '../../models/evento.dart';
 import '../../widgets/app_bar_custom.dart';
 import 'detalle_evento_screen.dart';
 
-/// Pantalla Eventos
-/// Lista todos los eventos asignados al trabajador desde Firestore
 class EventosScreen extends StatefulWidget {
   const EventosScreen({super.key});
 

@@ -11,6 +11,7 @@ import 'package:hands4events/core/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/idioma_provider.dart';
 import 'modal_base.dart';
+import '../../utils/top_snackbar.dart';
 
 class ModalEditarDireccion extends StatefulWidget {
   const ModalEditarDireccion({super.key});
@@ -222,13 +223,8 @@ class _ModalEditarDireccionState extends State<ModalEditarDireccion> {
         ? _direccionGuardar
         : _controller.text.trim();
     if (dir.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(t.tr('direccion_invalida')),
-          backgroundColor: AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showTopSnackBar(context, t.tr('direccion_invalida'),
+          backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       return;
     }
 
@@ -239,14 +235,11 @@ class _ModalEditarDireccionState extends State<ModalEditarDireccion> {
     if (mounted) {
       setState(() => _isLoading = false);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(exito
-              ? t.tr('direccion_actualizada')
-              : t.tr('error_actualizar_direccion')),
-          backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showTopSnackBar(
+        context,
+        exito ? t.tr('direccion_actualizada') : t.tr('error_actualizar_direccion'),
+        backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
+        icon: exito ? Icons.check_circle_outline : Icons.error_outline,
       );
     }
   }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import 'package:hands4events/core/roles.dart';
 import 'package:hands4events/models/evento.dart';
 import 'package:hands4events/screens/chat/chat_evento_screen.dart';
 import 'package:hands4events/screens/fichaje/fichaje_screen.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
@@ -31,8 +33,9 @@ class DetalleEventoScreen extends StatelessWidget {
   }
 
   String _getHora() {
-    String fmt(DateTime dt) =>
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    String fmt(DateTime dt) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
     return '${fmt(evento.fechaInicio)} - ${fmt(evento.fechaFin)}';
   }
 
@@ -46,6 +49,11 @@ class DetalleEventoScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.watch<IdiomaProvider>();
     final fecha = _getFecha(t.idioma);
+
+    // Calculamos el rol y tarifa reales del trabajador actual
+    final uid = context.read<AuthProvider>().currentUserId ?? '';
+    final rolReal = evento.trabajadoresRoles[uid] ?? evento.rolAsignado;
+    final tarifaReal = RolesEvento.tarifaDe(rolReal);
 
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
@@ -151,14 +159,16 @@ class DetalleEventoScreen extends StatelessWidget {
                   _buildInfoRow(context,
                     icono: Icons.attach_money,
                     titulo: t.tr('cobro_hora'),
-                    valor: '${evento.cobroPorHora.toStringAsFixed(0)}€/h',
+                    valor: tarifaReal > 0
+                        ? '${tarifaReal.toStringAsFixed(1)}€/h'
+                        : t.tr('sin_especificar'),
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(context,
                     icono: Icons.work_outline,
                     titulo: t.tr('rol_asignado'),
-                    valor: evento.rolAsignado.isNotEmpty
-                        ? evento.rolAsignado
+                    valor: rolReal.isNotEmpty
+                        ? rolReal
                         : t.tr('sin_especificar'),
                   ),
                   const SizedBox(height: 16),

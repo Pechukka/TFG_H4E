@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Modelo de Nómina
-/// Representa una nómina mensual con su PDF asociado
 class Nomina {
   final String id;
   final String trabajadorId;
@@ -29,7 +27,6 @@ class Nomina {
     this.estado = NominaEstado.generada,
   });
 
-  // Getters
   String get nombreCompleto {
     return '$mes $anio';
   }
@@ -88,7 +85,6 @@ class Nomina {
     };
   }
 
-  // CopyWith
   Nomina copyWith({
     String? id,
     String? trabajadorId,
@@ -118,7 +114,6 @@ class Nomina {
   }
 }
 
-/// Estados posibles de una nómina
 enum NominaEstado {
   generada,   // Nómina generada pero no revisada
   revisada,   // Revisada por el trabajador

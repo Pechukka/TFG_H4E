@@ -4,6 +4,7 @@ import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/idioma_provider.dart';
 import 'modal_base.dart';
+import '../../utils/top_snackbar.dart';
 
 class ModalSeleccionarIdioma extends StatefulWidget {
   const ModalSeleccionarIdioma({super.key});
@@ -45,14 +46,11 @@ class _ModalSeleccionarIdiomaState extends State<ModalSeleccionarIdioma> {
       final clave = _idiomas.firstWhere((i) => i['codigo'] == _codigoSeleccionado)['clave']!;
       final nombre = t.tr(clave);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(exito
-              ? '${t.tr('idioma_cambiado_a')} $nombre'
-              : t.tr('error_cambiar_idioma')),
-          backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showTopSnackBar(
+        context,
+        exito ? '${t.tr('idioma_cambiado_a')} $nombre' : t.tr('error_cambiar_idioma'),
+        backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
+        icon: exito ? Icons.check_circle_outline : Icons.error_outline,
       );
     }
   }

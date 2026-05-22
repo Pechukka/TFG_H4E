@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/disponibilidad_provider.dart';
 import '../../providers/idioma_provider.dart';
 import 'modal_base.dart';
+import '../../utils/top_snackbar.dart';
 
 class ModalDisponibilidad extends StatefulWidget {
   final DateTime fechaSeleccionada;
@@ -62,17 +63,20 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
       context: context,
       initialTime: esInicio ? _horaInicio : _horaFin,
       builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.verdeNeon,
-              onPrimary: AppTheme.textoSobreVerde,
-              surface: AppTheme.fondoCard,
-              onSurface: AppTheme.textoBlanco,
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: Theme(
+            data: ThemeData.dark().copyWith(
+              colorScheme: const ColorScheme.dark(
+                primary: AppTheme.verdeNeon,
+                onPrimary: AppTheme.textoSobreVerde,
+                surface: AppTheme.fondoCard,
+                onSurface: AppTheme.textoBlanco,
+              ),
+              dialogTheme: const DialogThemeData(backgroundColor: AppTheme.fondoCard),
             ),
-            dialogTheme: const DialogThemeData(backgroundColor: AppTheme.fondoCard),
+            child: child!,
           ),
-          child: child!,
         );
       },
     );
@@ -104,19 +108,25 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
     if (mounted) {
       setState(() => _isLoading = false);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(t.tr('disponibilidad_eliminada')),
-          backgroundColor: AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showTopSnackBar(context, t.tr('disponibilidad_eliminada'),
+          backgroundColor: AppTheme.rojoError, icon: Icons.delete_outline);
     }
   }
 
   Future<void> _guardar(IdiomaProvider t) async {
     final userId = context.read<AuthProvider>().currentUserId;
     if (userId == null) return;
+
+    final inicioMin = _horaInicio.hour * 60 + _horaInicio.minute;
+    // 00:00 como hora de fin = medianoche = 24:00 = 1440 min
+    final finMin = (_horaFin.hour == 0 && _horaFin.minute == 0)
+        ? 1440
+        : _horaFin.hour * 60 + _horaFin.minute;
+    if (finMin <= inicioMin) {
+      showTopSnackBar(context, t.tr('error_hora_fin_menor'),
+          backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -126,25 +136,21 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
           horaInicio: _horaInicio,
           horaFin: _horaFin,
           aplicarRecurrente: _aplicarATodosLosDias,
+          existingId: _disponibilidadId,
         );
 
     if (mounted) {
       setState(() => _isLoading = false);
       Navigator.pop(context);
       final nombreDia = _getNombreDia(t);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            exito
-                ? (_aplicarATodosLosDias
-                    ? '${t.tr('disponibilidad_guardada')} – ${t.tr('aplicar_recurrente_prefijo')}$nombreDia${t.tr('aplicar_recurrente_sufijo')}'
-                    : t.tr('disponibilidad_guardada'))
-                : 'Error',
-          ),
+      final msg = exito
+          ? (_aplicarATodosLosDias
+              ? '${t.tr('disponibilidad_guardada')} – ${t.tr('aplicar_recurrente_prefijo')}$nombreDia${t.tr('aplicar_recurrente_sufijo')}'
+              : t.tr('disponibilidad_guardada'))
+          : 'Error';
+      showTopSnackBar(context, msg,
           backgroundColor: exito ? AppTheme.verdeExito : AppTheme.rojoError,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+          icon: exito ? Icons.check_circle_outline : Icons.error_outline);
     }
   }
 
@@ -258,8 +264,12 @@ class _ModalDisponibilidadState extends State<ModalDisponibilidad> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_formatearHora(_horaFin),
-                                style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              (_horaFin.hour == 0 && _horaFin.minute == 0)
+                                  ? '24:00'
+                                  : _formatearHora(_horaFin),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             const Icon(Icons.access_time, color: AppTheme.verdeNeon, size: 20),
                           ],
                         ),

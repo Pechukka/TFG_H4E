@@ -14,7 +14,7 @@ class NotificacionesService {
               .map((doc) => Notificacion.fromFirestore(doc))
               .toList();
           lista.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-          return lista.take(20).toList();
+          return lista.take(30).toList();
         });
   }
 
@@ -23,5 +23,30 @@ class NotificacionesService {
         .collection('notificaciones')
         .doc(notificacionId)
         .update({'leida': true});
+  }
+
+  Future<void> eliminarNotificacion(String notificacionId) async {
+    await _firestore
+        .collection('notificaciones')
+        .doc(notificacionId)
+        .delete();
+  }
+
+  static Future<void> enviarNotificacion({
+    required String trabajadorId,
+    required TipoNotificacion tipo,
+    required String titulo,
+    required String mensaje,
+    Map<String, dynamic>? datos,
+  }) async {
+    await FirebaseFirestore.instance.collection('notificaciones').add({
+      'trabajadorId': trabajadorId,
+      'tipo': tipo.toString(),
+      'titulo': titulo,
+      'mensaje': mensaje,
+      'timestamp': FieldValue.serverTimestamp(),
+      'leida': false,
+      'datos': datos,
+    });
   }
 }

@@ -2,12 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/nomina.dart';
 import '../core/constants.dart';
 
-/// Servicio de Nóminas
-/// Gestiona consulta y descarga de nóminas del trabajador
 class NominasService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// OBTENER NÓMINAS DEL TRABAJADOR
   Stream<List<Nomina>> getNominasTrabajador(String trabajadorId) {
     return _firestore
         .collection(AppConstants.colNominas)
@@ -25,7 +22,6 @@ class NominasService {
         });
   }
 
-  /// OBTENER NÓMINA POR MES/AÑO
   Future<Nomina?> getNominaPorMes(
     String trabajadorId,
     int anio,
@@ -45,7 +41,6 @@ class NominasService {
     return null;
   }
 
-  /// MARCAR NÓMINA COMO REVISADA
   Future<void> marcarComoRevisada(String nominaId) async {
     await _firestore
         .collection(AppConstants.colNominas)
@@ -55,7 +50,6 @@ class NominasService {
         });
   }
 
-  /// OBTENER ÚLTIMAS NÓMINAS (para dashboard)
   Future<List<Nomina>> getUltimasNominas(String trabajadorId, {int limite = 6}) async {
     final snapshot = await _firestore
         .collection(AppConstants.colNominas)
@@ -70,7 +64,6 @@ class NominasService {
     return lista.take(limite).toList();
   }
 
-  /// CALCULAR TOTAL GANADO EN EL AÑO
   Future<double> getTotalGanadoAnio(String trabajadorId, int anio) async {
     final snapshot = await _firestore
         .collection(AppConstants.colNominas)
@@ -87,7 +80,6 @@ class NominasService {
     return total;
   }
 
-  /// CREAR NÓMINA (solo admin - futuro)
   Future<String> crearNomina(Nomina nomina) async {
     final doc = await _firestore
         .collection(AppConstants.colNominas)

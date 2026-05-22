@@ -8,11 +8,8 @@ import '../../widgets/modals/modal_editar_telefono.dart';
 import '../../widgets/modals/modal_editar_direccion.dart';
 import '../../widgets/modals/modal_seleccionar_idioma.dart';
 import '../../widgets/modals/modal_notificaciones.dart';
-import '../../widgets/modals/modal_seleccionar_avatar.dart';
 import '../nominas/nominas_screen.dart';
 
-/// Pantalla de perfil del usuario
-/// Muestra datos reales del usuario autenticado desde AuthProvider
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
 
@@ -22,15 +19,6 @@ class PerfilScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const ModalEditarTelefono(),
-    );
-  }
-
-  void _mostrarModalAvatar(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const ModalSeleccionarAvatar(),
     );
   }
 
@@ -136,59 +124,14 @@ class PerfilScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            // Avatar con botón de edición
+            // Avatar con iniciales
             Column(
               children: [
-                Stack(
-                  children: [
-                    // Círculo del avatar
-                    GestureDetector(
-                      onTap: () => _mostrarModalAvatar(context),
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                        ),
-                        child: ClipOval(
-                          child: usuario?.avatarUrl != null &&
-                                  usuario!.avatarUrl!.isNotEmpty
-                              ? Image.network(
-                                  usuario.avatarUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      _buildIniciales(iniciales),
-                                )
-                              : _buildIniciales(iniciales),
-                        ),
-                      ),
-                    ),
-                    // Botón lápiz
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: GestureDetector(
-                        onTap: () => _mostrarModalAvatar(context),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: AppTheme.verdeNeon,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppTheme.fondoPrincipal,
-                              width: 2,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            color: AppTheme.textoSobreVerde,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                  child: ClipOval(child: _buildIniciales(iniciales)),
                 ),
                 const SizedBox(height: 16),
                 Text(

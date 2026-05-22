@@ -3,12 +3,9 @@ import '../models/fichaje.dart';
 import '../core/constants.dart';
 import 'package:geolocator/geolocator.dart';
 
-/// Servicio de Fichajes
-/// Gestiona clock-in, clock-out, pausas y validación GPS
 class FichajesService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// OBTENER FICHAJE ACTIVO DEL TRABAJADOR EN UN EVENTO
   Future<Fichaje?> getFichajeActivo(String trabajadorId, String eventoId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colFichajes)
@@ -27,7 +24,6 @@ class FichajesService {
     return null;
   }
 
-  /// FICHAR ENTRADA
   Future<Fichaje> ficharEntrada({
     required String trabajadorId,
     required String eventoId,
@@ -40,7 +36,7 @@ class FichajesService {
     }
 
     final fichaje = Fichaje(
-      id: '', // Se asigna automáticamente
+      id: '',
       trabajadorId: trabajadorId,
       eventoId: eventoId,
       entrada: DateTime.now(),
@@ -65,7 +61,6 @@ class FichajesService {
     return fichaje.copyWith(id: doc.id);
   }
 
-  /// FICHAR SALIDA
   Future<void> ficharSalida({
     required String fichajeId,
     Position? ubicacion,
@@ -93,7 +88,6 @@ class FichajesService {
     }
   }
 
-  /// PAUSAR FICHAJE
   Future<void> pausarFichaje(String fichajeId) async {
     final doc = await _firestore
         .collection(AppConstants.colFichajes)
@@ -114,7 +108,6 @@ class FichajesService {
         });
   }
 
-  /// REANUDAR FICHAJE
   Future<void> reanudarFichaje(String fichajeId) async {
     final doc = await _firestore
         .collection(AppConstants.colFichajes)
@@ -143,7 +136,6 @@ class FichajesService {
         });
   }
 
-  /// OBTENER FICHAJES DEL TRABAJADOR
   Future<List<Fichaje>> getFichajesTrabajador(String trabajadorId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colFichajes)
@@ -155,8 +147,8 @@ class FichajesService {
     return lista;
   }
 
-  /// OBTENER FICHAJES FINALIZADOS DE UN EVENTO (historial)
   Future<List<Fichaje>> getFichajesEvento(String trabajadorId, String eventoId) async {
+    // Filtrar por eventoId y estado en Dart para evitar índice compuesto en Firestore
     final snapshot = await _firestore
         .collection(AppConstants.colFichajes)
         .where('trabajadorId', isEqualTo: trabajadorId)
@@ -170,7 +162,6 @@ class FichajesService {
     return lista;
   }
 
-  /// VALIDAR GPS (opcional - requiere configuración adicional)
   Future<Position> obtenerUbicacion() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {

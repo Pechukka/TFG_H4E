@@ -6,8 +6,6 @@ import 'calendario/calendario_screen.dart';
 import 'eventos/eventos_screen.dart';
 import 'perfil/perfil_screen.dart';
 
-/// Scaffold principal de la aplicación
-/// Contiene el BottomNavigationBar y gestiona la navegación entre secciones
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
 

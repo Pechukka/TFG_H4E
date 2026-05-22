@@ -5,6 +5,7 @@ import '../../providers/eventos_provider.dart';
 import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../utils/top_snackbar.dart';
 
 class EquipoEventoScreen extends StatefulWidget {
   final String tituloEvento;
@@ -211,13 +212,9 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
                         await launchUrl(uri);
                       } catch (_) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(t.tr('error_llamada')),
+                          showTopSnackBar(context, t.tr('error_llamada'),
                               backgroundColor: AppTheme.rojoError,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                              icon: Icons.error_outline);
                         }
                       }
                     }

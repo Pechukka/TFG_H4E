@@ -6,6 +6,8 @@ enum TipoNotificacion {
   nominaPublicada,
   documentoRequerido,
   cambioEvento,
+  recordatorio,
+  eventoCancelado,
   sistema,
 }
 
@@ -17,7 +19,7 @@ class Notificacion {
   final String mensaje;
   final DateTime timestamp;
   final bool leida;
-  final Map<String, dynamic>? datos; // eventoId, chatId, etc.
+  final Map<String, dynamic>? datos;
 
   Notificacion({
     required this.id,

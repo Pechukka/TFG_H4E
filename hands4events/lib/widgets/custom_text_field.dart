@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hands4events/core/theme.dart';
 
-/// Campo de texto personalizado Hands4Events
-/// Estilo: fondo verde oscuro, borde verde al focus
 class CustomTextField extends StatelessWidget {
   final String hintText;
   final String? labelText;

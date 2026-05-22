@@ -1,9 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 
-// Providers
 import 'providers/auth_provider.dart';
 import 'providers/eventos_provider.dart';
 import 'providers/chat_provider.dart';
@@ -12,23 +12,19 @@ import 'providers/nominas_provider.dart';
 import 'providers/disponibilidad_provider.dart';
 import 'providers/notificaciones_provider.dart';
 import 'providers/idioma_provider.dart';
-// Screens
 import 'screens/auth/login_screen.dart';
 import 'screens/main_scaffold.dart';
-// Services
+import 'screens/admin/admin_shell.dart';
+import 'screens/auth/primer_login_screen.dart';
 import 'services/fcm_service.dart';
-
-// Core
 import 'core/theme.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Register background FCM handler before runApp
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
-  // Initialize global navigator key used by FcmService
   appNavigatorKey = GlobalKey<NavigatorState>();
 
   runApp(const MyApp());
@@ -61,9 +57,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Wrapper que decide mostrar Login o MainScaffold
-/// El spinner SOLO aparece en el arranque inicial (initialize),
-/// NO durante login/logout → así LoginScreen permanece montado
+// El spinner solo aparece en el arranque inicial; LoginScreen permanece montado durante login/logout
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -91,8 +85,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final idioma = _authProvider!.currentUser?.idioma ?? 'es';
         Provider.of<IdiomaProvider>(context, listen: false).cambiarIdioma(idioma);
 
-        // Si ya hay sesión activa, inicializar FCM
-        if (_authProvider!.isAuthenticated && _authProvider!.currentUserId != null) {
+        // Si ya hay sesión activa, inicializar FCM (solo móvil — web no soportado sin VAPID)
+        if (!kIsWeb && _authProvider!.isAuthenticated && _authProvider!.currentUserId != null) {
           FcmService.initialize(_authProvider!.currentUserId!);
         }
 
@@ -111,9 +105,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final isAuth = _authProvider?.isAuthenticated ?? false;
 
     if (!_eraAutenticado && isAuth) {
-      // Usuario acaba de iniciar sesión — inicializar FCM
+      // Usuario acaba de iniciar sesión — inicializar FCM (solo móvil)
       final userId = _authProvider?.currentUserId;
-      if (userId != null) FcmService.initialize(userId);
+      if (!kIsWeb && userId != null) FcmService.initialize(userId);
     }
 
     if (_eraAutenticado && !isAuth) {
@@ -142,6 +136,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     final authProvider = Provider.of<AuthProvider>(context);
-    return authProvider.isAuthenticated ? const MainScaffold() : const LoginScreen();
+    if (!authProvider.isAuthenticated) return const LoginScreen();
+    if (authProvider.currentUser?.debeReiniciarPassword == true) {
+      return const PrimerLoginScreen();
+    }
+    final esAdmin = authProvider.currentUser?.rol == 'admin';
+    if (esAdmin && kIsWeb) return const AdminShell();
+    return const MainScaffold();
   }
 }

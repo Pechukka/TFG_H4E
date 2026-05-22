@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hands4events/core/theme.dart';
 
-/// Botón con borde verde y fondo transparente
-/// Usado para acciones secundarias (Cancelar, Pausar, etc.)
 class CustomOutlineButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;

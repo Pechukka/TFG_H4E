@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/idioma_provider.dart';
 import '../../providers/nominas_provider.dart';
+import '../../utils/pdf_generator.dart';
 import '../../widgets/app_bar_custom.dart';
 
 class NominasScreen extends StatefulWidget {
@@ -196,34 +196,29 @@ class _NominasScreenState extends State<NominasScreen> {
               ],
             ),
           ),
-          if (nomina.tienePdf())
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                color: AppTheme.verdeNeon,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.download, color: AppTheme.textoSobreVerde, size: 20),
-                onPressed: () async {
-                  final uri = Uri.parse(nomina.pdfUrl!);
-                  try {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } catch (_) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(t.tr('no_se_puede_abrir')),
-                          backgroundColor: AppTheme.rojoError,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: AppTheme.verdeNeon,
+              shape: BoxShape.circle,
             ),
+            child: IconButton(
+              icon: const Icon(Icons.download, color: AppTheme.textoSobreVerde, size: 20),
+              tooltip: 'Descargar PDF',
+              onPressed: () async {
+                final nombre = context.read<AuthProvider>().currentUser?.nombre ?? '';
+                await PdfGenerator.descargarNominaWorker(
+                  nombreTrabajador: nombre,
+                  mes: nomina.mes,
+                  anio: nomina.anio,
+                  horasTrabajadas: nomina.horasTrabajadas,
+                  sueldoBruto: nomina.sueldoBruto,
+                  sueldoNeto: nomina.sueldoNeto,
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

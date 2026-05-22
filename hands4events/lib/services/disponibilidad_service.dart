@@ -3,21 +3,19 @@ import 'package:flutter/material.dart';
 import '../models/disponibilidad.dart';
 import '../core/constants.dart';
 
-/// Servicio de Disponibilidad
-/// Gestiona los horarios de disponibilidad del trabajador
 class DisponibilidadService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// GUARDAR DISPONIBILIDAD
   Future<void> guardarDisponibilidad({
     required String trabajadorId,
     required DateTime fecha,
     required TimeOfDay horaInicio,
     required TimeOfDay horaFin,
     bool aplicarRecurrente = false,
+    String? existingId,
   }) async {
     final disponibilidad = Disponibilidad(
-      id: '',
+      id: existingId ?? '',
       trabajadorId: trabajadorId,
       fecha: fecha,
       horaInicio: horaInicio,
@@ -27,9 +25,16 @@ class DisponibilidadService {
       createdAt: DateTime.now(),
     );
 
-    await _firestore
-        .collection(AppConstants.colDisponibilidad)
-        .add(disponibilidad.toFirestore());
+    if (existingId != null) {
+      await _firestore
+          .collection(AppConstants.colDisponibilidad)
+          .doc(existingId)
+          .update(disponibilidad.toFirestore());
+    } else {
+      await _firestore
+          .collection(AppConstants.colDisponibilidad)
+          .add(disponibilidad.toFirestore());
+    }
 
     // Si es recurrente, crear para todos los días de ese tipo en el mes
     if (aplicarRecurrente) {
@@ -42,8 +47,7 @@ class DisponibilidadService {
     }
   }
 
-  /// CREAR DISPONIBILIDAD RECURRENTE
-  /// Crea entradas para el mismo día de la semana durante los próximos 2 años
+  // Crea entradas para el mismo día de la semana durante los próximos 2 años
   Future<void> _crearDisponibilidadRecurrente({
     required String trabajadorId,
     required DateTime fecha,
@@ -77,7 +81,6 @@ class DisponibilidadService {
     await batch.commit();
   }
 
-  /// OBTENER DISPONIBILIDAD DE UN DÍA
   Future<Disponibilidad?> getDisponibilidadDia(
     String trabajadorId,
     DateTime fecha,
@@ -99,7 +102,6 @@ class DisponibilidadService {
     return coincidencias.isNotEmpty ? coincidencias.first : null;
   }
 
-  /// OBTENER DISPONIBILIDADES DEL MES
   Future<Map<int, bool>> getDisponibilidadesDelMes(
     String trabajadorId,
     int anio,
@@ -124,7 +126,6 @@ class DisponibilidadService {
     return diasConDisponibilidad;
   }
 
-  /// ELIMINAR DISPONIBILIDAD
   Future<void> eliminarDisponibilidad(String disponibilidadId) async {
     await _firestore
         .collection(AppConstants.colDisponibilidad)

@@ -37,6 +37,12 @@ class NotificacionesProvider with ChangeNotifier {
     await _service.marcarLeida(notificacionId);
   }
 
+  Future<void> eliminarNotificacion(String notificacionId) async {
+    _notificaciones.removeWhere((n) => n.id == notificacionId);
+    notifyListeners();
+    await _service.eliminarNotificacion(notificacionId);
+  }
+
   void reset() {
     _subscription?.cancel();
     _subscription = null;
