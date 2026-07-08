@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Reglas de seguridad de Cloud Storage para Hands4Events.
+// El despliegue lo hace el desarrollador con: firebase deploy --only storage
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function estaLogueado() {
+      return request.auth != null;
+    }
+
+    // Comprueba el rol 'admin' leyendo el doc del usuario en Firestore.
+    function esAdmin() {
+      return estaLogueado()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    // Imágenes del chat: cualquier usuario logueado puede subir y leer.
+    match /chat_images/{archivo=**} {
+      allow read: if estaLogueado();
+      allow write: if estaLogueado();
+    }
+
+    // Nóminas (PDF): las lee cualquier usuario logueado (el worker abre la suya con la
+    // URL con token guardada en su nómina). Solo el admin las sube o borra.
+    match /nominas/{archivo=**} {
+      allow read: if estaLogueado();
+      allow write: if esAdmin();
+    }
+
+    // Todo lo demás, denegado.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

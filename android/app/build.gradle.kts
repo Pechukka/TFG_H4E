@@ -25,6 +25,21 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // 🔧 AJUSTAR: la API key de Google Maps se lee de android/local.properties
+        // (no versionado). Añade ahí la línea:  mapsApiKey=TU_KEY_NUEVA_RESTRINGIDA
+        // Si no existe, queda vacía y el mapa nativo simplemente no se renderiza.
+        val mapsApiKey: String = run {
+            val propsFile = rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                val props = java.util.Properties()
+                propsFile.inputStream().use { props.load(it) }
+                props.getProperty("mapsApiKey", "")
+            } else {
+                ""
+            }
+        }
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {

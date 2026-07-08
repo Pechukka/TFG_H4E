@@ -7,20 +7,23 @@ Leyenda: 🎯 pedido por mí · 💡 propuesto por Claude · 🔧 requiere decis
 
 ---
 
-## Fase 0 — Baseline y seguridad `chore`
+## Fase 0 — Baseline y seguridad `chore` ✅
 Dejar el proyecto sano y seguro antes de meterle mano.
 
-- [ ] `flutter pub get` + `flutter analyze` de partida; anota los problemas actuales.
-- [ ] 🎯 Reescribir `README.md` (ahora es el stub de Flutter): descripción real del
+- [x] `flutter pub get` + `flutter analyze` de partida; anota los problemas actuales.
+      → Baseline **limpio**: `No issues found!`.
+- [x] 🎯 Reescribir `README.md` (ahora es el stub de Flutter): descripción real del
       proyecto, stack, cómo arrancar worker (móvil) y admin (web), estructura de carpetas.
-- [ ] 🔧 Sacar la **API key de Google Maps** de `lib/core/constants.dart` del código, o
+- [x] 🔧 Sacar la **API key de Google Maps** de `lib/core/constants.dart` del código, o
       dejarla restringida por app/dominio. Marcar con `// 🔧 AJUSTAR`.
-- [ ] 💡 Crear `firestore.rules` y `storage.rules` con reglas **por rol**:
+      → En Dart vía `--dart-define=GOOGLE_MAPS_API_KEY`; en Android nativo vía
+      `android/local.properties` (`mapsApiKey=...`). Key nueva y restringida: la generas tú.
+- [x] 💡 Crear `firestore.rules` y `storage.rules` con reglas **por rol**:
       - worker: lee/edita solo SU disponibilidad, SUS fichajes, SU perfil; lee eventos
         donde está asignado; lee sus nóminas.
       - admin: acceso de gestión completo.
       (Redactar las reglas; el `firebase deploy` lo hago yo.)
-- [ ] Commit: `chore: baseline, README y reglas de seguridad` → push.
+- [x] Commit: `chore: baseline, README y reglas de seguridad` → push.
 
 ---
 

@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para Hands4Events.
+// Modelo: cada worker accede SOLO a lo suyo; el admin gestiona todo.
+// El despliegue lo hace el desarrollador con: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+    function estaLogueado() {
+      return request.auth != null;
+    }
+
+    // Lee el doc del usuario actual y comprueba que su rol sea 'admin'.
+    function esAdmin() {
+      return estaLogueado()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    // ¿El uid indicado es el del usuario logueado?
+    function esMio(uid) {
+      return estaLogueado() && request.auth.uid == uid;
+    }
+
+    // ¿El usuario está asignado al evento (o es admin)?
+    function esMiembroEvento(eventoId) {
+      return esAdmin()
+        || (estaLogueado()
+            && request.auth.uid in get(/databases/$(database)/documents/eventos/$(eventoId)).data.trabajadoresIds);
+    }
+
+    // ---------- users ----------
+    // Cada worker lee y edita SOLO su propio perfil. El admin gestiona todos.
+    match /users/{userId} {
+      allow read: if esMio(userId) || esAdmin();
+      allow create: if esAdmin();            // las altas de trabajadores las hace el admin
+      allow update: if esMio(userId) || esAdmin();
+      allow delete: if esAdmin();
+    }
+
+    // ---------- eventos ----------
+    // El worker lee los eventos donde está asignado. Solo el admin crea/edita/borra.
+    match /eventos/{eventoId} {
+      allow read: if esAdmin()
+        || (estaLogueado() && request.auth.uid in resource.data.trabajadoresIds);
+      allow create, update, delete: if esAdmin();
+    }
+
+    // ---------- disponibilidad ----------
+    // El worker gestiona SOLO su disponibilidad. El admin la consulta.
+    match /disponibilidad/{dispId} {
+      allow read: if esMio(resource.data.trabajadorId) || esAdmin();
+      allow create: if esMio(request.resource.data.trabajadorId) || esAdmin();
+      allow update, delete: if esMio(resource.data.trabajadorId) || esAdmin();
+    }
+
+    // ---------- fichajes ----------
+    // El worker ficha SOLO por sí mismo. El admin consulta todos.
+    match /fichajes/{fichajeId} {
+      allow read: if esMio(resource.data.trabajadorId) || esAdmin();
+      allow create: if esMio(request.resource.data.trabajadorId) || esAdmin();
+      allow update, delete: if esMio(resource.data.trabajadorId) || esAdmin();
+    }
+
+    // ---------- mensajes (chat por evento) ----------
+    // Leen/escriben el admin y los workers asignados al evento del mensaje.
+    match /mensajes/{mensajeId} {
+      allow read: if esMiembroEvento(resource.data.eventoId);
+      // Al crear, el remitente debe ser uno mismo y hay que pertenecer al evento.
+      allow create: if esMiembroEvento(request.resource.data.eventoId)
+        && request.resource.data.remitenteId == request.auth.uid;
+      // Solo el autor (o el admin) edita/borra su mensaje.
+      allow update, delete: if esAdmin() || esMio(resource.data.remitenteId);
+    }
+
+    // ---------- nominas ----------
+    // El worker lee SOLO sus nóminas. Solo el admin las crea/edita/borra.
+    match /nominas/{nominaId} {
+      allow read: if esMio(resource.data.trabajadorId) || esAdmin();
+      allow create, update, delete: if esAdmin();
+    }
+
+    // ---------- Por defecto: denegado ----------
+    // Todo lo que no encaje arriba queda bloqueado explícitamente.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
