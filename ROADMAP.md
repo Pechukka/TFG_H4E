@@ -86,6 +86,10 @@ sin asignar a nadie, y el worker acepta/rechaza cada evento deslizando cartas (t
       - Opción simple: guardar aceptados/rechazados dentro del propio `Evento`.
       - Opción con postulaciones: colección nueva `respuestas` (o `postulaciones`)
         `{eventoId, trabajadorId, estado: aceptado|rechazado|confirmado, rol?, createdAt}`.
+      - ⚠️ **Actualizar `firestore.rules`**: hoy el worker solo puede leer eventos donde ya
+        está asignado. El feed necesita que pueda leer eventos **publicados** en los que **NO**
+        está. Ampliar la regla de `eventos` y añadir reglas para la colección de respuestas
+        (worker gestiona solo las suyas).
 - [ ] Commit: `feat: feed de eventos tipo tinder (aceptar/rechazar por swipe)` → push.
 
 > ⚠️ Antes de codificar esta fase, resuélveme la DECISIÓN 1 y la DECISIÓN 2. Ninguna línea
