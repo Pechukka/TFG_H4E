@@ -1,0 +1,4 @@
+# NUNCA subir la clave de la cuenta de servicio ni las dependencias
+serviceAccountKey.json
+*.json.key
+node_modules/
