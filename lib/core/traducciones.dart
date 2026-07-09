@@ -142,6 +142,7 @@ class Traducciones {
       // Equipo
       'equipo_evento_titulo': 'Equipo del Evento',
       'sin_equipo': 'No hay información de equipo disponible',
+      'equipo_no_cargado': 'No se pudo cargar el equipo',
       'sin_rol': 'Sin rol asignado',
       'sin_telefono': 'Sin teléfono',
       'error_llamada': 'No se puede realizar la llamada',
@@ -393,6 +394,7 @@ class Traducciones {
       // Equipo
       'equipo_evento_titulo': 'Event Team',
       'sin_equipo': 'No team information available',
+      'equipo_no_cargado': 'Could not load the team',
       'sin_rol': 'No role assigned',
       'sin_telefono': 'No phone',
       'error_llamada': 'Cannot make the call',

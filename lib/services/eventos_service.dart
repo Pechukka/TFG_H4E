@@ -101,6 +101,7 @@ class EventosService {
 
     // Camino normal: la info del equipo va denormalizada en el propio evento,
     // así el worker no necesita leer los docs de users (su regla se lo prohíbe).
+    // El flag esAdmin lo pinta la pantalla como "Admin"; 'rol' es el rol real.
     if (evento.trabajadoresInfo.isNotEmpty) {
       final equipo = <Map<String, dynamic>>[];
       for (var trabajadorId in evento.trabajadoresIds) {
@@ -111,16 +112,19 @@ class EventosService {
           'nombre': info['nombre'] ?? '',
           'telefono': info['telefono'] ?? '',
           'rol': info['rol'] ?? '',
+          'esAdmin': info['esAdmin'] == true,
         });
       }
       return equipo;
     }
 
     // Fallback para eventos antiguos sin trabajadoresInfo: leer users uno a uno.
-    // Va en try/catch porque, con las reglas por rol, un worker solo puede leer su
-    // propio doc; los demás se omiten sin romper la pantalla. Los eventos nuevos ya
-    // llevan trabajadoresInfo, así que el worker sí ve el equipo completo.
+    // Con las reglas por rol, un worker solo puede leer su propio doc; si alguna
+    // lectura es denegada, marcamos el fallo y lanzamos excepción para que la
+    // pantalla avise ("No se pudo cargar el equipo") en vez de mostrar una lista
+    // a medias. El admin sí puede leer todos, así que para él no falla.
     final equipo = <Map<String, dynamic>>[];
+    bool huboFallo = false;
     for (var trabajadorId in evento.trabajadoresIds) {
       try {
         final userDoc = await _firestore
@@ -135,12 +139,19 @@ class EventosService {
             'id': trabajadorId,
             'nombre': data['nombre'] ?? '',
             'telefono': data['telefono'] ?? '',
-            'rol': esAdmin ? 'Admin' : (evento.trabajadoresRoles[trabajadorId] ?? ''),
+            'rol': evento.trabajadoresRoles[trabajadorId] ?? '',
+            'esAdmin': esAdmin,
           });
         }
       } catch (_) {
-        // Sin permiso para leer este doc (regla por rol): lo omitimos.
+        // Sin permiso para leer este doc (regla por rol).
+        huboFallo = true;
       }
+    }
+
+    // Si no pudimos cargar el equipo completo, avisamos al llamante.
+    if (huboFallo) {
+      throw Exception('equipo_incompleto');
     }
 
     return equipo;

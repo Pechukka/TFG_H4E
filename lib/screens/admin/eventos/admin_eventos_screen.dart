@@ -593,11 +593,14 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
           };
         }
       }
-      // El admin también forma parte del equipo (como Coordinador)
+      // El admin también forma parte del equipo. En trabajadoresRoles sigue siendo
+      // 'Coordinador' (hay código que depende de ello), pero marcamos esAdmin para
+      // que la pantalla de equipo lo muestre como "Admin".
       trabajadoresInfo[adminUid] = {
         'nombre': adminNombre,
         'telefono': adminTelefono,
         'rol': 'Coordinador',
+        'esAdmin': true,
       };
 
       if (_esEdicion) {

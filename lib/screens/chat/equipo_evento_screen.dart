@@ -24,6 +24,8 @@ class EquipoEventoScreen extends StatefulWidget {
 class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
   List<Map<String, dynamic>> _equipo = [];
   bool _cargando = true;
+  // true si la carga falló (p.ej. permisos): mostramos aviso, no lista vacía.
+  bool _errorCarga = false;
 
   @override
   void initState() {
@@ -41,7 +43,9 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
 
     if (mounted) {
       setState(() {
-        _equipo = equipo;
+        // null = no se pudo cargar; lista (aunque vacía) = carga correcta.
+        _errorCarga = equipo == null;
+        _equipo = equipo ?? [];
         _cargando = false;
       });
     }
@@ -80,6 +84,21 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
                 child: CircularProgressIndicator(color: AppTheme.verdeNeon),
               ),
             )
+          else if (_errorCarga)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    t.tr('equipo_no_cargado'),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textoSecundario,
+                        ),
+                  ),
+                ),
+              ),
+            )
           else ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -114,12 +133,13 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
                         final miembro = _equipo[index];
                         final nombre = miembro['nombre'] as String? ?? '';
                         final rol = miembro['rol'] as String? ?? '';
+                        final esAdmin = miembro['esAdmin'] == true;
                         final telefono = miembro['telefono'] as String? ?? '';
                         return _buildMiembroCard(
                           context,
                           t: t,
                           nombre: nombre,
-                          rol: rol.isNotEmpty ? rol : sinRol,
+                          rol: esAdmin ? 'Admin' : (rol.isNotEmpty ? rol : sinRol),
                           telefono: telefono.isNotEmpty ? telefono : sinTelefono,
                           avatar: _iniciales(nombre),
                           sinTelefono: sinTelefono,
