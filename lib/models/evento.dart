@@ -13,6 +13,10 @@ class Evento {
   // Mapa que guarda el rol de cada trabajador: {uid: nombreRol}
   // Solo lo usa el panel de admin — la app worker lo ignora
   final Map<String, String> trabajadoresRoles;
+  // Info denormalizada del equipo: {uid: {nombre, telefono, rol}}.
+  // Se guarda aquí para que el worker vea el equipo sin leer la colección users
+  // (la regla de Firestore le prohíbe leer los docs de otros usuarios).
+  final Map<String, Map<String, dynamic>> trabajadoresInfo;
 
   Evento({
     required this.id,
@@ -25,6 +29,7 @@ class Evento {
     required this.rolAsignado,
     this.trabajadoresIds = const [],
     this.trabajadoresRoles = const {},
+    this.trabajadoresInfo = const {},
   });
 
   String get fechaFormateada {
@@ -62,6 +67,8 @@ class Evento {
       rolAsignado: data['rolAsignado'] ?? '',
       trabajadoresIds: List<String>.from(data['trabajadoresIds'] ?? []),
       trabajadoresRoles: Map<String, String>.from(data['trabajadoresRoles'] ?? {}),
+      trabajadoresInfo: (data['trabajadoresInfo'] as Map<String, dynamic>? ?? {})
+          .map((uid, info) => MapEntry(uid, Map<String, dynamic>.from(info as Map))),
     );
   }
 
@@ -77,6 +84,7 @@ class Evento {
       'rolAsignado': rolAsignado,
       'trabajadoresIds': trabajadoresIds,
       'trabajadoresRoles': trabajadoresRoles,
+      'trabajadoresInfo': trabajadoresInfo,
     };
   }
 }

@@ -578,6 +578,27 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     try {
       final adminUid = context.read<AuthProvider>().currentUserId ?? '';
       final adminNombre = context.read<AuthProvider>().currentUser?.nombre ?? '';
+      final adminTelefono = context.read<AuthProvider>().currentUser?.telefono ?? '';
+
+      // Denormalizamos nombre/teléfono/rol de cada asignado dentro del evento,
+      // para que el worker vea el equipo sin leer la colección users.
+      final Map<String, Map<String, dynamic>> trabajadoresInfo = {};
+      for (var w in _workers) {
+        final uid = w['uid'] as String;
+        if (rolesSeleccionados.containsKey(uid)) {
+          trabajadoresInfo[uid] = {
+            'nombre': w['nombre'] ?? '',
+            'telefono': w['telefono'] ?? '',
+            'rol': rolesSeleccionados[uid],
+          };
+        }
+      }
+      // El admin también forma parte del equipo (como Coordinador)
+      trabajadoresInfo[adminUid] = {
+        'nombre': adminNombre,
+        'telefono': adminTelefono,
+        'rol': 'Coordinador',
+      };
 
       if (_esEdicion) {
         final titulo = _tituloCtrl.text.trim();
@@ -591,6 +612,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
             'fechaFin': Timestamp.fromDate(fechaFin),
             'trabajadoresRoles': {...rolesSeleccionados, adminUid: 'Coordinador'},
             'trabajadoresIds': [...rolesSeleccionados.keys, adminUid],
+            'trabajadoresInfo': trabajadoresInfo,
           },
           workerIds: rolesSeleccionados.keys.toList(),
           titulo: titulo,
@@ -603,6 +625,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
           fechaInicio: fechaInicio,
           fechaFin: fechaFin,
           trabajadoresRoles: rolesSeleccionados,
+          trabajadoresInfo: trabajadoresInfo,
           adminUid: adminUid,
           adminNombre: adminNombre,
         );

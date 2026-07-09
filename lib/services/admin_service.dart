@@ -104,6 +104,7 @@ class AdminService {
         'uid': doc.id,
         'nombre': '${data['nombre'] ?? ''} ${data['apellidos'] ?? ''}'.trim(),
         'email': data['email'] ?? '',
+        'telefono': data['telefono'] ?? '',
       };
     }).toList();
 
@@ -476,6 +477,8 @@ class AdminService {
     required DateTime fechaInicio,
     required DateTime fechaFin,
     required Map<String, String> trabajadoresRoles, // {uid: rol}
+    // Info denormalizada del equipo {uid: {nombre, telefono, rol}}, admin incluido.
+    required Map<String, Map<String, dynamic>> trabajadoresInfo,
     required String adminUid,
     required String adminNombre,
   }) async {
@@ -494,6 +497,7 @@ class AdminService {
       'fechaFin': Timestamp.fromDate(fechaFin),
       'trabajadoresIds': ids,
       'trabajadoresRoles': rolesConAdmin,
+      'trabajadoresInfo': trabajadoresInfo,
       'rolAsignado': '',
       'cobroPorHora': 0.0,
       'creadoPor': adminUid,

@@ -99,23 +99,47 @@ class EventosService {
     final evento = await getEvento(eventoId);
     if (evento == null) return [];
 
-    final equipo = <Map<String, dynamic>>[];
-    
-    for (var trabajadorId in evento.trabajadoresIds) {
-      final userDoc = await _firestore
-          .collection(AppConstants.colUsers)
-          .doc(trabajadorId)
-          .get();
-
-      if (userDoc.exists) {
-        final data = userDoc.data()!;
-        final esAdmin = (data['rol'] as String?) == 'admin';
+    // Camino normal: la info del equipo va denormalizada en el propio evento,
+    // así el worker no necesita leer los docs de users (su regla se lo prohíbe).
+    if (evento.trabajadoresInfo.isNotEmpty) {
+      final equipo = <Map<String, dynamic>>[];
+      for (var trabajadorId in evento.trabajadoresIds) {
+        final info = evento.trabajadoresInfo[trabajadorId];
+        if (info == null) continue;
         equipo.add({
           'id': trabajadorId,
-          'nombre': data['nombre'] ?? '',
-          'telefono': data['telefono'] ?? '',
-          'rol': esAdmin ? 'Admin' : (evento.trabajadoresRoles[trabajadorId] ?? ''),
+          'nombre': info['nombre'] ?? '',
+          'telefono': info['telefono'] ?? '',
+          'rol': info['rol'] ?? '',
         });
+      }
+      return equipo;
+    }
+
+    // Fallback para eventos antiguos sin trabajadoresInfo: leer users uno a uno.
+    // Va en try/catch porque, con las reglas por rol, un worker solo puede leer su
+    // propio doc; los demás se omiten sin romper la pantalla. Los eventos nuevos ya
+    // llevan trabajadoresInfo, así que el worker sí ve el equipo completo.
+    final equipo = <Map<String, dynamic>>[];
+    for (var trabajadorId in evento.trabajadoresIds) {
+      try {
+        final userDoc = await _firestore
+            .collection(AppConstants.colUsers)
+            .doc(trabajadorId)
+            .get();
+
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          final esAdmin = (data['rol'] as String?) == 'admin';
+          equipo.add({
+            'id': trabajadorId,
+            'nombre': data['nombre'] ?? '',
+            'telefono': data['telefono'] ?? '',
+            'rol': esAdmin ? 'Admin' : (evento.trabajadoresRoles[trabajadorId] ?? ''),
+          });
+        }
+      } catch (_) {
+        // Sin permiso para leer este doc (regla por rol): lo omitimos.
       }
     }
 
