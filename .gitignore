@@ -55,8 +55,8 @@ app.*.map.json
 # Claude/IA context (BORRAR al finalizar TFG)
 .ai/
 .claude/
-CLAUDE.md
 *.claude.md
+# CLAUDE.md SÍ se versiona (es la guía de trabajo del proyecto)
 
 # VSCode Claude settings
 .vscode/settings.json
