@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
 import 'widgets/admin_sidebar.dart';
+import 'dashboard/admin_dashboard_screen.dart';
 import 'workers/admin_workers_screen.dart';
 import 'eventos/admin_eventos_screen.dart';
 import 'nominas/admin_nominas_screen.dart';
@@ -15,10 +16,12 @@ class AdminShell extends StatefulWidget {
 }
 
 class _AdminShellState extends State<AdminShell> {
-  AdminSection _section = AdminSection.workers;
+  AdminSection _section = AdminSection.dashboard;
 
   Widget _buildContent() {
     switch (_section) {
+      case AdminSection.dashboard:
+        return const AdminDashboardScreen();
       case AdminSection.workers:
         return const AdminWorkersScreen();
       case AdminSection.eventos:
@@ -30,6 +33,8 @@ class _AdminShellState extends State<AdminShell> {
 
   String _sectionTitle() {
     switch (_section) {
+      case AdminSection.dashboard:
+        return 'Inicio';
       case AdminSection.workers:
         return 'Trabajadores';
       case AdminSection.eventos:
