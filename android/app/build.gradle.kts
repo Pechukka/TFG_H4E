@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -32,7 +34,7 @@ android {
         val mapsApiKey: String = run {
             val propsFile = rootProject.file("local.properties")
             if (propsFile.exists()) {
-                val props = java.util.Properties()
+                val props = Properties()
                 propsFile.inputStream().use { props.load(it) }
                 props.getProperty("mapsApiKey", "")
             } else {

@@ -88,12 +88,14 @@ class EventosProvider with ChangeNotifier {
     return _diasConEventos[dia] ?? false;
   }
 
-  Future<List<Map<String, dynamic>>> getEquipoEvento(String eventoId) async {
+  // Devuelve la lista del equipo, o null si no se pudo cargar (p.ej. permisos).
+  // La pantalla usa null para mostrar un aviso en vez de una lista vacía.
+  Future<List<Map<String, dynamic>>?> getEquipoEvento(String eventoId) async {
     try {
       return await _eventosService.getEquipoEvento(eventoId);
     } catch (e) {
       _setError('Error al cargar equipo: $e');
-      return [];
+      return null;
     }
   }
 
