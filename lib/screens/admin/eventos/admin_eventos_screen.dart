@@ -17,11 +17,17 @@ class AdminEventosScreen extends StatefulWidget {
   State<AdminEventosScreen> createState() => _AdminEventosScreenState();
 }
 
+// Filtro por estado (derivado de las fechas, no hay campo estado hasta Fase 3)
+enum _FiltroEstado { todos, proximos, enCurso, finalizados }
+
 class _AdminEventosScreenState extends State<AdminEventosScreen> {
   // Si es true, mostramos el formulario de crear evento en vez de la lista
   bool _mostrandoFormulario = false;
   // Evento que se está editando (null si se está creando uno nuevo)
   QueryDocumentSnapshot<Map<String, dynamic>>? _eventoEditando;
+  // Filtros de la lista
+  _FiltroEstado _filtroEstado = _FiltroEstado.todos;
+  DateTime? _fechaFiltro;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +64,9 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          _buildFiltros(),
+          const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: AdminService.todosLosEventosStream(),
@@ -80,14 +88,159 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                   return _buildSinEventos();
                 }
 
+                final filtrados = _aplicarFiltros(docs);
+                if (filtrados.isEmpty) {
+                  return _buildSinResultados();
+                }
+
                 return ListView.separated(
-                  itemCount: docs.length,
+                  itemCount: filtrados.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) => _buildCardEvento(docs[i]),
+                  itemBuilder: (context, i) => _buildCardEvento(filtrados[i]),
                 );
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // Aplica el filtro por estado (derivado de fechas) y por fecha concreta.
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _aplicarFiltros(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final ahora = DateTime.now();
+    return docs.where((doc) {
+      final data = doc.data();
+      final inicioTs = data['fechaInicio'];
+      final finTs = data['fechaFin'];
+      if (inicioTs is! Timestamp || finTs is! Timestamp) return false;
+      final inicio = inicioTs.toDate();
+      final fin = finTs.toDate();
+
+      // Filtro por estado
+      switch (_filtroEstado) {
+        case _FiltroEstado.todos:
+          break;
+        case _FiltroEstado.proximos:
+          if (!inicio.isAfter(ahora)) return false;
+          break;
+        case _FiltroEstado.enCurso:
+          if (!(ahora.isAfter(inicio) && ahora.isBefore(fin))) return false;
+          break;
+        case _FiltroEstado.finalizados:
+          if (!ahora.isAfter(fin)) return false;
+          break;
+      }
+
+      // Filtro por fecha concreta (mismo día)
+      if (_fechaFiltro != null) {
+        final f = _fechaFiltro!;
+        if (inicio.year != f.year ||
+            inicio.month != f.month ||
+            inicio.day != f.day) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  Widget _buildFiltros() {
+    return Row(
+      children: [
+        _chipEstado('Todos', _FiltroEstado.todos),
+        const SizedBox(width: 8),
+        _chipEstado('Próximos', _FiltroEstado.proximos),
+        const SizedBox(width: 8),
+        _chipEstado('En curso', _FiltroEstado.enCurso),
+        const SizedBox(width: 8),
+        _chipEstado('Finalizados', _FiltroEstado.finalizados),
+        const Spacer(),
+        // Filtro por fecha
+        OutlinedButton.icon(
+          onPressed: _seleccionarFechaFiltro,
+          icon: const Icon(Icons.calendar_today, size: 15),
+          label: Text(
+            _fechaFiltro == null
+                ? 'Fecha'
+                : '${_fechaFiltro!.day.toString().padLeft(2, '0')}/${_fechaFiltro!.month.toString().padLeft(2, '0')}/${_fechaFiltro!.year}',
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _fechaFiltro == null
+                ? AppTheme.textoSecundario
+                : AppTheme.verdeNeon,
+            side: BorderSide(
+                color: _fechaFiltro == null
+                    ? AppTheme.bordeCampo
+                    : AppTheme.verdeNeon),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+        ),
+        if (_fechaFiltro != null)
+          IconButton(
+            onPressed: () => setState(() => _fechaFiltro = null),
+            icon: const Icon(Icons.close,
+                color: AppTheme.textoTerciario, size: 18),
+            tooltip: 'Quitar filtro de fecha',
+          ),
+      ],
+    );
+  }
+
+  Widget _chipEstado(String label, _FiltroEstado estado) {
+    final seleccionado = _filtroEstado == estado;
+    return ChoiceChip(
+      label: Text(label),
+      selected: seleccionado,
+      onSelected: (_) => setState(() => _filtroEstado = estado),
+      showCheckmark: false,
+      backgroundColor: AppTheme.fondoInput,
+      selectedColor: AppTheme.verdeNeon.withValues(alpha: 0.15),
+      labelStyle: TextStyle(
+        color: seleccionado ? AppTheme.verdeNeon : AppTheme.textoSecundario,
+        fontSize: 13,
+        fontWeight: seleccionado ? FontWeight.w600 : FontWeight.normal,
+      ),
+      side: BorderSide(
+        color: seleccionado ? AppTheme.verdeNeon : AppTheme.bordeCampo,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    );
+  }
+
+  Future<void> _seleccionarFechaFiltro() async {
+    final fecha = await showDatePicker(
+      context: context,
+      initialDate: _fechaFiltro ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 2)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppTheme.verdeNeon,
+            onPrimary: Colors.black,
+            surface: AppTheme.fondoCard,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (fecha != null) setState(() => _fechaFiltro = fecha);
+  }
+
+  Widget _buildSinResultados() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.filter_alt_off_outlined,
+              color: AppTheme.textoSecundario, size: 44),
+          SizedBox(height: 12),
+          Text('Ningún evento coincide con los filtros',
+              style: TextStyle(color: AppTheme.textoSecundario)),
         ],
       ),
     );

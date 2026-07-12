@@ -5,8 +5,22 @@ import '../../../services/admin_service.dart';
 import '../../../utils/pdf_generator.dart';
 import '../../../utils/top_snackbar.dart';
 
-class AdminWorkersScreen extends StatelessWidget {
+class AdminWorkersScreen extends StatefulWidget {
   const AdminWorkersScreen({super.key});
+
+  @override
+  State<AdminWorkersScreen> createState() => _AdminWorkersScreenState();
+}
+
+class _AdminWorkersScreenState extends State<AdminWorkersScreen> {
+  final _buscarCtrl = TextEditingController();
+  String _busqueda = '';
+
+  @override
+  void dispose() {
+    _buscarCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +47,13 @@ class AdminWorkersScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          // Buscador por nombre
+          _BuscadorWorkers(
+            controller: _buscarCtrl,
+            onChanged: (v) => setState(() => _busqueda = v.trim().toLowerCase()),
+          ),
+          const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: AdminService.workersStream(),
@@ -62,7 +82,22 @@ class AdminWorkersScreen extends StatelessWidget {
                   return _SinWorkers(onCrear: () => _mostrarCrearWorker(context));
                 }
 
-                return _TablaWorkers(docs: docs);
+                // Filtro por nombre/apellidos (en Dart)
+                final filtrados = _busqueda.isEmpty
+                    ? docs
+                    : docs.where((d) {
+                        final data = d.data();
+                        final nombre =
+                            '${data['nombre'] ?? ''} ${data['apellidos'] ?? ''}'
+                                .toLowerCase();
+                        return nombre.contains(_busqueda);
+                      }).toList();
+
+                if (filtrados.isEmpty) {
+                  return const _SinResultados();
+                }
+
+                return _TablaWorkers(docs: filtrados);
               },
             ),
           ),
@@ -76,6 +111,86 @@ class AdminWorkersScreen extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const _ModalCrearWorker(),
+    );
+  }
+}
+
+// ─────────────────────────────────────────
+// Buscador
+// ─────────────────────────────────────────
+
+class _BuscadorWorkers extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  const _BuscadorWorkers({required this.controller, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 360,
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: const TextStyle(color: AppTheme.textoBlanco, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Buscar por nombre…',
+          hintStyle:
+              const TextStyle(color: AppTheme.textoTerciario, fontSize: 14),
+          prefixIcon: const Icon(Icons.search,
+              color: AppTheme.textoTerciario, size: 20),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close,
+                      color: AppTheme.textoTerciario, size: 18),
+                  onPressed: () {
+                    controller.clear();
+                    onChanged('');
+                  },
+                ),
+          filled: true,
+          fillColor: AppTheme.fondoInput,
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTheme.bordeCard),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTheme.bordeCard),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTheme.verdeNeon),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────
+// Sin resultados de búsqueda
+// ─────────────────────────────────────────
+
+class _SinResultados extends StatelessWidget {
+  const _SinResultados();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off, color: AppTheme.textoSecundario, size: 44),
+          SizedBox(height: 12),
+          Text('Ningún trabajador coincide con la búsqueda',
+              style: TextStyle(color: AppTheme.textoSecundario)),
+        ],
+      ),
     );
   }
 }
