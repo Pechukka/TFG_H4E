@@ -27,21 +27,23 @@ Dejar el proyecto sano y seguro antes de meterle mano.
 
 ---
 
-## Fase 1 — Panel web admin: dashboard + pulido `feat(admin)`
+## Fase 1 — Panel web admin: dashboard + pulido `feat(admin)` ✅
 Hoy el admin solo tiene 3 secciones (Trabajadores, Eventos, Nóminas) y ningún resumen.
 
-- [ ] 💡 **Añadir sección Dashboard** como pantalla de entrada del admin
+- [x] 💡 **Añadir sección Dashboard** como pantalla de entrada del admin
       (nueva entrada en `AdminSection` + `AdminSidebar` + `AdminShell`). Tarjetas KPI:
       - nº de trabajadores activos
       - eventos próximos (siguientes 7 días)
       - horas fichadas del mes en curso
       - nóminas pendientes de enviar este mes
-      - lista corta "próximos eventos" con su cobertura (X/Y roles cubiertos)
-- [ ] 🎯 **Pulido visual del panel** (sin salirse de `AppTheme`, minimalista):
+      - lista corta "próximos eventos" con su cobertura (nº de asignados)
+      → `nota:` la cobertura se muestra como "nº de asignados" (no "X/Y") porque el máximo
+      por rol (`plazasPorRol`) todavía no existe; llega en la Fase 2.
+- [x] 🎯 **Pulido visual del panel** (sin salirse de `AppTheme`, minimalista):
       jerarquía tipográfica, espaciados consistentes, estados hover/seleccionado del
       sidebar, tablas/listas más legibles, estados vacíos ("aún no hay eventos") decentes.
-- [ ] 💡 **Buscador + filtros** en Trabajadores (por nombre) y Eventos (por fecha/estado).
-- [ ] Commit: `feat(admin): dashboard, buscadores y refinamiento visual` → push.
+- [x] 💡 **Buscador + filtros** en Trabajadores (por nombre) y Eventos (por fecha/estado).
+- [x] Commit: `feat(admin): dashboard, buscadores y refinamiento visual` → push.
 
 ---
 
