@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hands4events/core/theme.dart';
 
-enum AdminSection { workers, eventos, nominas }
+enum AdminSection { dashboard, workers, eventos, nominas }
 
 class AdminSidebar extends StatelessWidget {
   final AdminSection selected;
@@ -46,6 +46,12 @@ class AdminSidebar extends StatelessWidget {
           const Divider(color: AppTheme.bordeCard, height: 1),
           const SizedBox(height: 12),
           _SidebarItem(
+            icon: Icons.dashboard_outlined,
+            label: 'Inicio',
+            selected: selected == AdminSection.dashboard,
+            onTap: () => onSelect(AdminSection.dashboard),
+          ),
+          _SidebarItem(
             icon: Icons.people_outline,
             label: 'Trabajadores',
             selected: selected == AdminSection.workers,
@@ -79,7 +85,7 @@ class AdminSidebar extends StatelessWidget {
   }
 }
 
-class _SidebarItem extends StatelessWidget {
+class _SidebarItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool selected;
@@ -95,33 +101,52 @@ class _SidebarItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? AppTheme.verdeNeon
-        : (textColor ?? AppTheme.textoBlanco);
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.verdeNeon.withValues(alpha: 0.1) : null,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                fontSize: 14,
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.selected
+        ? AppTheme.verdeNeon
+        : (widget.textColor ?? AppTheme.textoBlanco);
+
+    // Fondo: seleccionado (verde tenue) > hover (gris tenue) > nada
+    final Color? fondo = widget.selected
+        ? AppTheme.verdeNeon.withValues(alpha: 0.1)
+        : (_hover ? AppTheme.fondoHover : null);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: fondo,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(widget.icon, color: color, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight:
+                      widget.selected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

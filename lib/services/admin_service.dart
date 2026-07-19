@@ -514,4 +514,89 @@ class AdminService {
       );
     }
   }
+
+  // ─── FASE 1: Datos del dashboard admin ──────────────────────────────────────
+
+  // Calcula de una sola vez todos los KPIs de la pantalla de inicio del admin.
+  // Sigue el patrón del proyecto: se lee y filtra en Dart (sin índices compuestos).
+  static Future<Map<String, dynamic>> getDatosDashboard() async {
+    final ahora = DateTime.now();
+    final inicioMes = DateTime(ahora.year, ahora.month, 1);
+    final finMes = DateTime(ahora.year, ahora.month + 1, 1);
+    final limite7dias = ahora.add(const Duration(days: 7));
+
+    // 1. Trabajadores activos (rol worker y activo != false)
+    final workersSnap = await _firestore
+        .collection('users')
+        .where('rol', isEqualTo: 'worker')
+        .get();
+    final trabajadoresActivos =
+        workersSnap.docs.where((d) => d.data()['activo'] != false).length;
+
+    // 2. Eventos: nº en los próximos 7 días + lista corta de próximos con cobertura
+    final eventosSnap = await _firestore.collection('eventos').get();
+    final proximos = <Map<String, dynamic>>[];
+    int eventosProximos7 = 0;
+    for (final doc in eventosSnap.docs) {
+      final data = doc.data();
+      final inicioTs = data['fechaInicio'];
+      if (inicioTs is! Timestamp) continue;
+      final inicio = inicioTs.toDate();
+      if (!inicio.isAfter(ahora)) continue; // solo futuros
+      if (inicio.isBefore(limite7dias)) eventosProximos7++;
+      // Cobertura = trabajadores asignados sin contar al admin (el creador)
+      final ids = List<String>.from(data['trabajadoresIds'] ?? []);
+      final creadoPor = data['creadoPor'] as String?;
+      final asignados = ids.where((id) => id != creadoPor).length;
+      proximos.add({
+        'titulo': data['titulo'] ?? 'Sin título',
+        'fecha': inicio,
+        'asignados': asignados,
+      });
+    }
+    proximos.sort(
+        (a, b) => (a['fecha'] as DateTime).compareTo(b['fecha'] as DateTime));
+    final proximosCorto = proximos.take(5).toList();
+
+    // 3. Horas fichadas del mes en curso (fichajes finalizados) + quién trabajó
+    final fichajesSnap = await _firestore.collection('fichajes').get();
+    double horasMes = 0;
+    final workersConHoras = <String>{};
+    for (final doc in fichajesSnap.docs) {
+      final data = doc.data();
+      final estado = data['estado'] as String? ?? '';
+      if (!estado.contains('finalizado')) continue;
+      final entradaTs = data['entrada'];
+      final salidaTs = data['salida'];
+      if (entradaTs is! Timestamp || salidaTs is! Timestamp) continue;
+      final entrada = entradaTs.toDate();
+      if (entrada.isBefore(inicioMes) || !entrada.isBefore(finMes)) continue;
+      horasMes += salidaTs.toDate().difference(entrada).inMinutes / 60.0;
+      final wid = data['trabajadorId'] as String? ?? '';
+      if (wid.isNotEmpty) workersConHoras.add(wid);
+    }
+
+    // 4. Nóminas pendientes de enviar: workers con horas este mes que aún no
+    //    tienen nómina generada para este mes.
+    final nominasSnap = await _firestore.collection('nominas').get();
+    final nominasMes = <String>{};
+    for (final doc in nominasSnap.docs) {
+      final data = doc.data();
+      if ((data['anio'] ?? 0) == ahora.year &&
+          (data['mesNumero'] ?? 0) == ahora.month) {
+        final wid = data['trabajadorId'] as String? ?? '';
+        if (wid.isNotEmpty) nominasMes.add(wid);
+      }
+    }
+    final nominasPendientes =
+        workersConHoras.where((w) => !nominasMes.contains(w)).length;
+
+    return {
+      'trabajadoresActivos': trabajadoresActivos,
+      'eventosProximos': eventosProximos7,
+      'horasMes': horasMes,
+      'nominasPendientes': nominasPendientes,
+      'proximosEventos': proximosCorto,
+    };
+  }
 }
