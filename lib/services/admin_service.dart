@@ -122,6 +122,12 @@ class AdminService {
         .snapshots();
   }
 
+  // Stream de un evento concreto (para ver la cobertura en vivo, Fase 2).
+  static Stream<DocumentSnapshot<Map<String, dynamic>>> eventoStream(
+      String eventoId) {
+    return _firestore.collection('eventos').doc(eventoId).snapshots();
+  }
+
   // Comprueba si un trabajador cubre completamente el rango horario del evento.
   // Si eventoInicio/eventoFin son null, solo comprueba que haya disponibilidad ese día.
   // Ejemplo: worker disponible 09:00–14:00, evento 07:00–10:00 → false
@@ -468,51 +474,44 @@ class AdminService {
     }
   }
 
-  // Crea un evento en Firestore con todos sus datos, incluyendo
-  // los trabajadores asignados y el rol de cada uno.
+  // Fase 2: el admin publica el evento SIN asignar a nadie. Solo define las plazas
+  // por rol y el estado. Los confirmados llegan luego desde las postulaciones.
+  // Al publicar, el único participante es el admin (como Coordinador).
   static Future<void> crearEventoAdmin({
     required String titulo,
     required String descripcion,
     required String ubicacion,
     required DateTime fechaInicio,
     required DateTime fechaFin,
-    required Map<String, String> trabajadoresRoles, // {uid: rol}
-    // Info denormalizada del equipo {uid: {nombre, telefono, rol}}, admin incluido.
-    required Map<String, Map<String, dynamic>> trabajadoresInfo,
+    required Map<String, int> plazasPorRol, // {rol: nº de plazas}
+    required String estado, // 'borrador' | 'publicado' | 'finalizado'
     required String adminUid,
     required String adminNombre,
+    required String adminTelefono,
   }) async {
-    // Lista de UIDs de todos los participantes (trabajadores + admin)
-    final ids = [...trabajadoresRoles.keys, adminUid];
-
-    // Incluimos al admin en el mapa de roles con "Coordinador"
-    final rolesConAdmin = Map<String, String>.from(trabajadoresRoles);
-    rolesConAdmin[adminUid] = 'Coordinador';
-
-    final ref = await _firestore.collection('eventos').add({
+    await _firestore.collection('eventos').add({
       'titulo': titulo,
       'descripcion': descripcion,
       'ubicacion': ubicacion,
       'fechaInicio': Timestamp.fromDate(fechaInicio),
       'fechaFin': Timestamp.fromDate(fechaFin),
-      'trabajadoresIds': ids,
-      'trabajadoresRoles': rolesConAdmin,
-      'trabajadoresInfo': trabajadoresInfo,
+      'plazasPorRol': plazasPorRol,
+      'estado': estado,
+      // Sin confirmados todavía: solo el admin como Coordinador.
+      'trabajadoresIds': [adminUid],
+      'trabajadoresRoles': {adminUid: 'Coordinador'},
+      'trabajadoresInfo': {
+        adminUid: {
+          'nombre': adminNombre,
+          'telefono': adminTelefono,
+          'rol': 'Coordinador',
+          'esAdmin': true,
+        },
+      },
       'rolAsignado': '',
       'cobroPorHora': 0.0,
       'creadoPor': adminUid,
     });
-
-    // Notificar a cada trabajador asignado (sin el admin)
-    for (final uid in trabajadoresRoles.keys) {
-      await _notificar(
-        uid,
-        tipo: TipoNotificacion.nuevoEvento,
-        titulo: 'Has sido asignado a un evento',
-        mensaje: titulo,
-        datos: {'eventoId': ref.id, 'tituloEvento': titulo},
-      );
-    }
   }
 
   // ─── FASE 1: Datos del dashboard admin ──────────────────────────────────────

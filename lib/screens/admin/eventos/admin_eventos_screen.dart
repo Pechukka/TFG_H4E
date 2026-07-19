@@ -6,6 +6,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../core/roles.dart';
 import 'admin_fichajes_evento_screen.dart';
+import 'admin_postulaciones_screen.dart';
 import '../../../utils/top_snackbar.dart';
 
 // Pantalla principal de eventos del admin.
@@ -253,6 +254,12 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     final fechaInicio = (data['fechaInicio'] as Timestamp).toDate();
     final fechaFin = (data['fechaFin'] as Timestamp).toDate();
     final trabajadoresIds = List<String>.from(data['trabajadoresIds'] ?? []);
+    // Estado del evento (eventos antiguos sin estado → publicado en la vista admin)
+    final estadoRaw = (data['estado'] as String?) ?? '';
+    final estadoVista = estadoRaw.isEmpty ? 'publicado' : estadoRaw;
+    // Confirmados = asignados sin contar al admin creador
+    final creadoPor = data['creadoPor'] as String?;
+    final confirmados = trabajadoresIds.where((id) => id != creadoPor).length;
 
     final fechaStr =
         '${fechaInicio.day.toString().padLeft(2, '0')}/${fechaInicio.month.toString().padLeft(2, '0')}/${fechaInicio.year}';
@@ -302,6 +309,13 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                       child: Text(titulo,
                           style: Theme.of(context).textTheme.titleSmall),
                     ),
+                    if (estadoVista == 'borrador') ...[
+                      const SizedBox(width: 8),
+                      _badgeEstado('BORRADOR', AppTheme.amarilloAdvertencia),
+                    ] else if (estadoVista == 'finalizado') ...[
+                      const SizedBox(width: 8),
+                      _badgeEstado('FINALIZADO', AppTheme.textoTerciario),
+                    ],
                     if (enCurso) ...[
                       const SizedBox(width: 8),
                       Container(
@@ -339,22 +353,37 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // Número de trabajadores
+          // Nº de confirmados (sin contar al admin)
           Column(
             children: [
               Text(
-                '${trabajadoresIds.length}',
+                '$confirmados',
                 style: const TextStyle(
                     color: AppTheme.verdeNeon,
                     fontWeight: FontWeight.bold,
                     fontSize: 18),
               ),
-              const Text('trabajadores',
+              const Text('confirmados',
                   style: TextStyle(
                       color: AppTheme.textoTerciario, fontSize: 10)),
             ],
           ),
           const SizedBox(width: 12),
+          // Botón ver postulaciones
+          IconButton(
+            icon: const Icon(Icons.how_to_reg_outlined,
+                color: AppTheme.textoSecundario, size: 18),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AdminPostulacionesScreen(
+                  eventoId: doc.id,
+                  tituloEvento: data['titulo'] as String? ?? 'Evento',
+                ),
+              ),
+            ),
+            tooltip: 'Ver postulaciones',
+          ),
           // Botón ver fichajes
           IconButton(
             icon: const Icon(Icons.fingerprint,
@@ -381,6 +410,20 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _badgeEstado(String texto, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color),
+      ),
+      child: Text(texto,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -506,15 +549,10 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
   DateTime? _fechaSeleccionada;
   TimeOfDay? _horaSeleccionada;
 
-  // Lista de trabajadores cargados desde Firestore
-  List<Map<String, dynamic>> _workers = [];
-  bool _cargandoWorkers = true;
-
-  // Para cada worker guardamos si está seleccionado y qué rol tiene
-  final Map<String, bool> _seleccionados = {};
-  final Map<String, String> _roles = {};
-  // Indica si ese worker tiene disponibilidad ese día
-  final Map<String, bool> _disponibilidades = {};
+  // Plazas objetivo por rol {rol: nº}. Se inicializa a 0 para cada rol.
+  final Map<String, int> _plazas = {for (final r in RolesEvento.todos) r: 0};
+  // Estado de publicación del evento
+  String _estado = 'publicado';
 
   bool _guardando = false;
   String? _errorMsg;
@@ -524,12 +562,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
   @override
   void initState() {
     super.initState();
-    _cargarWorkers();
     if (_esEdicion) _rellenarDatosExistentes();
-    // Recalcular disponibilidad cuando cambia la duración
-    _duracionCtrl.addListener(() {
-      if (_fechaSeleccionada != null) _comprobarDisponibilidades(_fechaSeleccionada!);
-    });
   }
 
   @override
@@ -554,54 +587,13 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     _horaSeleccionada = TimeOfDay(hour: inicio.hour, minute: inicio.minute);
     _duracionCtrl.text = fin.difference(inicio).inHours.toString();
 
-    final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
-    for (var entry in roles.entries) {
-      _seleccionados[entry.key] = true;
-      _roles[entry.key] = entry.value;
+    // Plazas por rol y estado del evento
+    final plazas = Map<String, dynamic>.from(data['plazasPorRol'] ?? {});
+    for (final entry in plazas.entries) {
+      _plazas[entry.key] = (entry.value as num).toInt();
     }
-  }
-
-  Future<void> _cargarWorkers() async {
-    final lista = await AdminService.getWorkers();
-    if (!mounted) return;
-    setState(() {
-      _workers = lista;
-      _cargandoWorkers = false;
-      // Inicializamos cada worker como no seleccionado si no venía de edición
-      for (var w in lista) {
-        final uid = w['uid'] as String;
-        _seleccionados.putIfAbsent(uid, () => false);
-        _roles.putIfAbsent(uid, () => RolesEvento.todos.first);
-      }
-    });
-    // Al editar, la fecha ya está cargada — lanzar comprobación de disponibilidad
-    if (_esEdicion && _fechaSeleccionada != null) {
-      _comprobarDisponibilidades(_fechaSeleccionada!);
-    }
-  }
-
-  // Recalcula la disponibilidad de todos los workers para el rango actual del evento.
-  // Si no hay hora o duración todavía, solo comprueba que haya disponibilidad ese día.
-  Future<void> _comprobarDisponibilidades(DateTime fecha) async {
-    DateTime? eventoInicio;
-    DateTime? eventoFin;
-
-    if (_horaSeleccionada != null) {
-      eventoInicio = DateTime(
-        fecha.year, fecha.month, fecha.day,
-        _horaSeleccionada!.hour, _horaSeleccionada!.minute,
-      );
-      final duracion = int.tryParse(_duracionCtrl.text.trim()) ?? 0;
-      if (duracion > 0) eventoFin = eventoInicio.add(Duration(hours: duracion));
-    }
-
-    for (var w in _workers) {
-      final uid = w['uid'] as String;
-      final disponible = await AdminService.tieneDisponibilidad(
-          uid, fecha, eventoInicio, eventoFin);
-      if (!mounted) return;
-      setState(() => _disponibilidades[uid] = disponible);
-    }
+    final est = data['estado'] as String?;
+    _estado = (est == null || est.isEmpty) ? 'publicado' : est;
   }
 
   Future<void> _seleccionarFecha() async {
@@ -623,7 +615,6 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     );
     if (fecha != null) {
       setState(() => _fechaSeleccionada = fecha);
-      _comprobarDisponibilidades(fecha);
     }
   }
 
@@ -644,8 +635,6 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     );
     if (hora != null) {
       setState(() => _horaSeleccionada = hora);
-      // Recalculamos con la nueva hora si ya había fecha seleccionada
-      if (_fechaSeleccionada != null) _comprobarDisponibilidades(_fechaSeleccionada!);
     }
   }
 
@@ -717,13 +706,14 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     );
     final fechaFin = fechaInicio.add(Duration(hours: duracion));
 
-    // Solo los workers que el admin marcó como seleccionados
-    final Map<String, String> rolesSeleccionados = {};
-    for (var w in _workers) {
-      final uid = w['uid'] as String;
-      if (_seleccionados[uid] == true) {
-        rolesSeleccionados[uid] = _roles[uid] ?? RolesEvento.todos.first;
-      }
+    // Plazas por rol: solo las que tienen algún hueco (> 0)
+    final Map<String, int> plazasPorRol = {};
+    _plazas.forEach((rol, n) {
+      if (n > 0) plazasPorRol[rol] = n;
+    });
+    if (plazasPorRol.isEmpty) {
+      setState(() => _errorMsg = 'Define al menos una plaza en algún rol.');
+      return;
     }
 
     setState(() { _guardando = true; _errorMsg = null; });
@@ -733,31 +723,14 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
       final adminNombre = context.read<AuthProvider>().currentUser?.nombre ?? '';
       final adminTelefono = context.read<AuthProvider>().currentUser?.telefono ?? '';
 
-      // Denormalizamos nombre/teléfono/rol de cada asignado dentro del evento,
-      // para que el worker vea el equipo sin leer la colección users.
-      final Map<String, Map<String, dynamic>> trabajadoresInfo = {};
-      for (var w in _workers) {
-        final uid = w['uid'] as String;
-        if (rolesSeleccionados.containsKey(uid)) {
-          trabajadoresInfo[uid] = {
-            'nombre': w['nombre'] ?? '',
-            'telefono': w['telefono'] ?? '',
-            'rol': rolesSeleccionados[uid],
-          };
-        }
-      }
-      // El admin también forma parte del equipo. En trabajadoresRoles sigue siendo
-      // 'Coordinador' (hay código que depende de ello), pero marcamos esAdmin para
-      // que la pantalla de equipo lo muestre como "Admin".
-      trabajadoresInfo[adminUid] = {
-        'nombre': adminNombre,
-        'telefono': adminTelefono,
-        'rol': 'Coordinador',
-        'esAdmin': true,
-      };
-
       if (_esEdicion) {
         final titulo = _tituloCtrl.text.trim();
+        // Al editar NO se tocan los confirmados (trabajadoresIds/Roles/Info): eso lo
+        // gestionan las confirmaciones de postulaciones. Solo datos + plazas + estado.
+        final data = widget.eventoExistente!.data();
+        final idsActuales = List<String>.from(data['trabajadoresIds'] ?? []);
+        final confirmadosIds =
+            idsActuales.where((id) => id != adminUid).toList();
         await AdminService.actualizarEvento(
           widget.eventoExistente!.id,
           datos: {
@@ -766,11 +739,10 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
             'ubicacion': _ubicacionCtrl.text.trim(),
             'fechaInicio': Timestamp.fromDate(fechaInicio),
             'fechaFin': Timestamp.fromDate(fechaFin),
-            'trabajadoresRoles': {...rolesSeleccionados, adminUid: 'Coordinador'},
-            'trabajadoresIds': [...rolesSeleccionados.keys, adminUid],
-            'trabajadoresInfo': trabajadoresInfo,
+            'plazasPorRol': plazasPorRol,
+            'estado': _estado,
           },
-          workerIds: rolesSeleccionados.keys.toList(),
+          workerIds: confirmadosIds,
           titulo: titulo,
         );
       } else {
@@ -780,10 +752,11 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
           ubicacion: _ubicacionCtrl.text.trim(),
           fechaInicio: fechaInicio,
           fechaFin: fechaFin,
-          trabajadoresRoles: rolesSeleccionados,
-          trabajadoresInfo: trabajadoresInfo,
+          plazasPorRol: plazasPorRol,
+          estado: _estado,
           adminUid: adminUid,
           adminNombre: adminNombre,
+          adminTelefono: adminTelefono,
         );
       }
 
@@ -917,23 +890,35 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                     ),
                   ),
                   const SizedBox(width: 24),
-                  // Columna derecha: lista de trabajadores para asignar
+                  // Columna derecha: plazas por rol + estado de publicación
                   Expanded(
                     flex: 4,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _seccion('Trabajadores'),
+                        _seccion('Plazas por rol'),
                         const SizedBox(height: 4),
-                        Text(
-                          _fechaSeleccionada == null
-                              ? 'Selecciona una fecha para ver disponibilidad'
-                              : 'El punto verde indica que el trabajador tiene disponibilidad ese día',
-                          style: const TextStyle(
+                        const Text(
+                          '¿Cuántos trabajadores necesitas de cada rol?',
+                          style: TextStyle(
                               color: AppTheme.textoTerciario, fontSize: 11),
                         ),
                         const SizedBox(height: 12),
-                        Expanded(child: _buildListaWorkers()),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (final rol in RolesEvento.todos)
+                                  _filaPlaza(rol),
+                                const SizedBox(height: 24),
+                                _seccion('Estado'),
+                                const SizedBox(height: 10),
+                                _selectorEstado(),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -946,209 +931,98 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     );
   }
 
-  Widget _buildListaWorkers() {
-    if (_cargandoWorkers) {
-      return const Center(
-          child: CircularProgressIndicator(color: AppTheme.verdeNeon));
-    }
-    if (_workers.isEmpty) {
-      return const Center(
-        child: Text('No hay trabajadores registrados',
-            style: TextStyle(color: AppTheme.textoSecundario)),
-      );
-    }
-
-    // Hasta que haya fecha + hora + duración no tiene sentido mostrar disponibilidad
-    if (_fechaSeleccionada == null || _horaSeleccionada == null ||
-        (int.tryParse(_duracionCtrl.text.trim()) ?? 0) <= 0) {
-      return const Center(
-        child: Text(
-          'Selecciona fecha, hora y duración\npara ver la disponibilidad',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.textoTerciario, fontSize: 12),
+  // Fila para definir cuántas plazas se necesitan de un rol (stepper - / +).
+  Widget _filaPlaza(String rol) {
+    final n = _plazas[rol] ?? 0;
+    final tarifa = RolesEvento.tarifaDe(rol);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.fondoCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: n > 0
+              ? AppTheme.verdeNeon.withValues(alpha: 0.4)
+              : AppTheme.bordeCard,
         ),
-      );
-    }
-
-    // Separamos según disponibilidad calculada
-    final disponibles = <Map<String, dynamic>>[];
-    final noDisponibles = <Map<String, dynamic>>[];
-    final comprobando = <Map<String, dynamic>>[];
-
-    for (final w in _workers) {
-      final uid = w['uid'] as String;
-      final disp = _disponibilidades[uid];
-      if (disp == null) {
-        comprobando.add(w); // aún calculando
-      } else if (disp) {
-        disponibles.add(w);
-      } else {
-        noDisponibles.add(w);
-      }
-    }
-
-    // Mientras se comprueba la disponibilidad, spinner
-    if (comprobando.isNotEmpty) {
-      return const Center(
-          child: CircularProgressIndicator(color: AppTheme.verdeNeon));
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      child: Row(
         children: [
-          if (disponibles.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'Ningún trabajador tiene disponibilidad en ese horario.',
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(rol,
+                    style: const TextStyle(
+                        color: AppTheme.textoBlanco, fontSize: 13)),
+                Text('${tarifa.toStringAsFixed(1)} €/h',
+                    style: const TextStyle(
+                        color: AppTheme.textoTerciario, fontSize: 11)),
+              ],
+            ),
+          ),
+          _botonPlaza(
+              Icons.remove, n > 0 ? () => setState(() => _plazas[rol] = n - 1) : null),
+          SizedBox(
+            width: 32,
+            child: Text('$n',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: AppTheme.textoSecundario, fontSize: 12),
-              ),
-            )
-          else ...[
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text('DISPONIBLES',
-                  style: TextStyle(
-                      color: AppTheme.verdeNeon,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5)),
-            ),
-            _buildSeccionWorkers(disponibles, disponibles: true),
-          ],
-          if (noDisponibles.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            // Sección colapsable de no disponibles
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.fondoCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.bordeCard),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: ExpansionTile(
-                tilePadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                collapsedIconColor: AppTheme.textoTerciario,
-                iconColor: AppTheme.textoTerciario,
-                title: Row(
-                  children: [
-                    const Icon(Icons.block_outlined,
-                        size: 14, color: AppTheme.textoTerciario),
-                    const SizedBox(width: 6),
-                    Text(
-                      'No disponibles (${noDisponibles.length})',
-                      style: const TextStyle(
-                          color: AppTheme.textoTerciario,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                children: noDisponibles.map((w) {
-                  final uid = w['uid'] as String;
-                  final nombre = w['nombre'] as String;
-                  final seleccionado = _seleccionados[uid] ?? false;
-                  final rol = _roles[uid] ?? RolesEvento.todos.first;
-                  return _buildItemWorker(
-                      uid, nombre, seleccionado, rol,
-                      disponible: false);
-                }).toList(),
-              ),
-            ),
-          ],
+                    color: n > 0
+                        ? AppTheme.verdeNeon
+                        : AppTheme.textoSecundario,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+          ),
+          _botonPlaza(Icons.add, () => setState(() => _plazas[rol] = n + 1)),
         ],
       ),
     );
   }
 
-  Widget _buildSeccionWorkers(
-      List<Map<String, dynamic>> workers, {required bool disponibles}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.fondoCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.bordeCard),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: workers.length,
-        separatorBuilder: (_, __) =>
-            const Divider(height: 1, color: AppTheme.bordeCard),
-        itemBuilder: (context, i) {
-          final w = workers[i];
-          final uid = w['uid'] as String;
-          final nombre = w['nombre'] as String;
-          final seleccionado = _seleccionados[uid] ?? false;
-          final rol = _roles[uid] ?? RolesEvento.todos.first;
-          return _buildItemWorker(uid, nombre, seleccionado, rol,
-              disponible: disponibles);
-        },
+  Widget _botonPlaza(IconData icon, VoidCallback? onTap) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      color: AppTheme.verdeNeon,
+      disabledColor: AppTheme.textoSutil,
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        backgroundColor: AppTheme.fondoPrincipal,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
     );
   }
 
-  Widget _buildItemWorker(
-    String uid,
-    String nombre,
-    bool seleccionado,
-    String rol, {
-    required bool disponible,
-  }) {
-    return CheckboxListTile(
-      value: seleccionado,
-      onChanged: (val) => setState(() => _seleccionados[uid] = val ?? false),
-      activeColor: AppTheme.verdeNeon,
-      checkColor: Colors.black,
-      title: Text(
-        nombre,
-        style: TextStyle(
-          color: disponible ? AppTheme.textoBlanco : AppTheme.textoTerciario,
-          fontSize: 13,
-        ),
+  Widget _selectorEstado() {
+    return Row(
+      children: [
+        _chipEstadoForm('Borrador', 'borrador'),
+        const SizedBox(width: 8),
+        _chipEstadoForm('Publicado', 'publicado'),
+        const SizedBox(width: 8),
+        _chipEstadoForm('Finalizado', 'finalizado'),
+      ],
+    );
+  }
+
+  Widget _chipEstadoForm(String label, String valor) {
+    final sel = _estado == valor;
+    return ChoiceChip(
+      label: Text(label),
+      selected: sel,
+      onSelected: (_) => setState(() => _estado = valor),
+      showCheckmark: false,
+      backgroundColor: AppTheme.fondoInput,
+      selectedColor: AppTheme.verdeNeon.withValues(alpha: 0.15),
+      labelStyle: TextStyle(
+        color: sel ? AppTheme.verdeNeon : AppTheme.textoSecundario,
+        fontSize: 13,
+        fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
       ),
-      subtitle: seleccionado
-          ? Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: DropdownButtonFormField<String>(
-                initialValue: RolesEvento.todos.contains(rol)
-                    ? rol
-                    : RolesEvento.todos.first,
-                dropdownColor: AppTheme.fondoCard,
-                style: const TextStyle(
-                    color: AppTheme.textoBlanco, fontSize: 12),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  filled: true,
-                  fillColor: AppTheme.fondoPrincipal,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: AppTheme.bordeCard),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: AppTheme.bordeCard),
-                  ),
-                ),
-                items: RolesEvento.todos.map((r) {
-                  return DropdownMenuItem(
-                    value: r,
-                    child: Text(
-                        '$r  –  ${RolesEvento.tarifaDe(r).toStringAsFixed(1)}€/h'),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _roles[uid] = val);
-                },
-              ),
-            )
-          : null,
+      side: BorderSide(color: sel ? AppTheme.verdeNeon : AppTheme.bordeCampo),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 
