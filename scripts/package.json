@@ -4,7 +4,8 @@
   "private": true,
   "description": "Scripts de mantenimiento one-off para Hands4Events (no se despliegan).",
   "scripts": {
-    "migrar-equipo": "node migrar-trabajadores-info.js"
+    "migrar-equipo": "node migrar-trabajadores-info.js",
+    "migrar-estado": "node migrar-estado-eventos.js"
   },
   "dependencies": {
     "firebase-admin": "^12.0.0"
