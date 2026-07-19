@@ -21,6 +21,7 @@ class PostulacionesService {
   // El admin confirma a un worker: marca la postulación como confirmada y lo añade
   // a los confirmados del evento (trabajadoresIds / trabajadoresRoles / trabajadoresInfo).
   // Se usan rutas de campo con punto y arrayUnion para no pisar confirmaciones en paralelo.
+  // Las dos escrituras van en un WriteBatch: o se aplican ambas o ninguna (atómico).
   static Future<void> confirmar({
     required String postulacionId,
     required String eventoId,
@@ -31,7 +32,11 @@ class PostulacionesService {
   }) async {
     final eventoRef =
         _firestore.collection(AppConstants.colEventos).doc(eventoId);
-    await eventoRef.update({
+    final postulacionRef =
+        _firestore.collection(AppConstants.colPostulaciones).doc(postulacionId);
+
+    final batch = _firestore.batch();
+    batch.update(eventoRef, {
       'trabajadoresIds': FieldValue.arrayUnion([trabajadorId]),
       'trabajadoresRoles.$trabajadorId': rol,
       'trabajadoresInfo.$trabajadorId': {
@@ -40,10 +45,8 @@ class PostulacionesService {
         'rol': rol,
       },
     });
-    await _firestore
-        .collection(AppConstants.colPostulaciones)
-        .doc(postulacionId)
-        .update({'estado': Postulacion.confirmado});
+    batch.update(postulacionRef, {'estado': Postulacion.confirmado});
+    await batch.commit();
   }
 
   // El admin descarta una postulación (no añade al worker al evento).
