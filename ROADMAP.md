@@ -47,55 +47,92 @@ Hoy el admin solo tiene 3 secciones (Trabajadores, Eventos, Nóminas) y ningún 
 
 ---
 
-## Fase 2 — Feed de eventos tipo Tinder `feat` (EL NÚCLEO)
-🎯 **Cambio de modelo, no un retoque.** Se elimina el sistema de "el worker programa su
-disponibilidad y el admin cuadra contra ella". Se sustituye por: **el admin publica eventos
-sin asignar a nadie, y el worker acepta/rechaza cada evento deslizando cartas (tipo Tinder).**
+## Fase 2 — Feed de eventos tipo Tinder `feat` (EL NÚCLEO) — spec cerrada
+🎯 **Cambio de modelo, no un retoque.** El admin publica eventos sin asignar a nadie, y el
+worker se postula/rechaza cada evento deslizando cartas (tipo Tinder). Las dos decisiones ya
+están tomadas. **No improvisar el modelo de datos: seguir esta spec.**
 
-**Lo que desaparece / se jubila:**
-- Colección `disponibilidad` y su lógica de emparejamiento (`AdminService.tieneDisponibilidad`,
-  `DisponibilidadService`, `disponibilidad_provider`, `modal_disponibilidad`). No lo borres de
-  golpe: primero monta lo nuevo, y en la fase de limpieza retiramos lo viejo.
-- La pantalla de **calendario** del worker (`calendario_screen.dart`) como sitio para marcar
-  disponibilidad. Se reemplaza por el feed de cartas (y se renombra el ítem de navegación,
-  p.ej. "Ofertas" / "Eventos disponibles").
+### Decisiones tomadas
+1. **Un evento pide VARIOS roles a la vez**, con nº de plazas por rol
+   (ej. 3× H4ndMontaje + 1× Coordinador).
+2. **Swipe derecha = el worker SE POSTULA.** No entra directo. El admin confirma después.
 
-### 2A — Lado admin: crear evento SIN asignar
-- [ ] Al crear/editar un evento, quitar toda la parte de "elegir entre disponibles".
-- [ ] El evento se publica con: título, fecha/hora, ubicación, descripción, cobro/hora,
-      **nº máximo de trabajadores que necesita** y **roles** requeridos.
-- [ ] 🔧 **DECISIÓN 1 (confírmamela):** ¿un evento pide **un solo rol** o **varios a la vez**
-      con nº por rol (ej. 3× Montaje + 1× Coordinador)?
-      - Si es varios → añadir campo `plazasPorRol{rol:int}` al modelo `Evento` (hoy solo hay
-        `rolAsignado` único). Migrar con compatibilidad hacia eventos existentes.
-- [ ] Vista admin del evento: ver **cobertura en vivo** (aceptados X / máximo Y) y la lista de
-      trabajadores que han aceptado.
-- [ ] 🎯 El evento **se crea y sigue válido aunque no se llene** el máximo. Nada de bloqueos.
+### Modelo de datos
 
-### 2B — Lado worker: feed de cartas (swipe)
-- [ ] Nueva pantalla de **feed de eventos** en forma de pila de cartas.
-      Cada carta muestra la info del evento (fecha, ubicación, roles, plazas, cobro/hora…).
-- [ ] **Deslizar derecha = aceptar · izquierda = rechazar.** Al rechazar, esa carta no vuelve
-      a salir. Al aceptar, se registra la respuesta del worker.
-- [ ] Solo aparecen eventos **publicados**, **futuros** y que el worker **no haya respondido**
-      todavía (y, si hay filtro por rol, que encajen con su rol).
-- [ ] 🔧 **DECISIÓN 2 (confírmamela):** al deslizar derecha, ¿el worker **entra directo** al
-      evento hasta llenar el máximo (por orden de llegada), o **solo se postula** y el admin
-      **confirma** al final entre los que aceptaron?
-      - Directo → más simple y automático; si se llena, la carta deja de ofrecerse.
-      - Con confirmación → el admin tiene la última palabra (más profesional, recomendado).
-- [ ] Modelo de datos nuevo para las respuestas. 🔧 A decidir según la DECISIÓN 2:
-      - Opción simple: guardar aceptados/rechazados dentro del propio `Evento`.
-      - Opción con postulaciones: colección nueva `respuestas` (o `postulaciones`)
-        `{eventoId, trabajadorId, estado: aceptado|rechazado|confirmado, rol?, createdAt}`.
-      - ⚠️ **Actualizar `firestore.rules`**: hoy el worker solo puede leer eventos donde ya
-        está asignado. El feed necesita que pueda leer eventos **publicados** en los que **NO**
-        está. Ampliar la regla de `eventos` y añadir reglas para la colección de respuestas
-        (worker gestiona solo las suyas).
-- [ ] Commit: `feat: feed de eventos tipo tinder (aceptar/rechazar por swipe)` → push.
+**`eventos` (campos nuevos):**
+- `plazasPorRol: {rol: int}` — plazas objetivo por rol. Ej. `{'H4ndMontaje': 3, 'Coordinador': 1}`
+- `estado: string` — `'borrador' | 'publicado' | 'finalizado'`. Solo los `publicado` entran
+  en el feed del worker.
 
-> ⚠️ Antes de codificar esta fase, resuélveme la DECISIÓN 1 y la DECISIÓN 2. Ninguna línea
-> de código de la Fase 2 se escribe hasta que yo las confirme.
+Se mantienen tal cual `trabajadoresIds`, `trabajadoresRoles` y `trabajadoresInfo`: pasan a
+significar **los CONFIRMADOS** por el admin. El admin sigue dentro como `Coordinador` en
+`trabajadoresRoles` y con `esAdmin: true` en `trabajadoresInfo`.
+
+**Compatibilidad:** eventos antiguos no tienen `estado` ni `plazasPorRol`. En Dart, `estado`
+ausente → trátalo como `'publicado'` solo para la vista admin; el filtro de "fecha futura" ya
+los deja fuera del feed. En las reglas, sin `estado` no son legibles por workers no asignados,
+y eso es correcto: nadie debe verlos en el feed.
+
+**`postulaciones` (colección NUEVA):**
+```
+{
+  eventoId: string,
+  trabajadorId: string,
+  rol: string,        // el puesto al que se postula
+  estado: string,     // 'pendiente' | 'rechazado_por_worker' | 'confirmado' | 'descartado'
+  createdAt: timestamp
+}
+```
+- Swipe **izquierda** → doc con `estado: 'rechazado_por_worker'` (esa carta no vuelve a salir).
+- Swipe **derecha** → doc con `estado: 'pendiente'`.
+- Admin **confirma** → `estado: 'confirmado'` **y** añade al worker a `trabajadoresIds` /
+  `trabajadoresRoles` / `trabajadoresInfo` del evento (con nombre, teléfono y rol).
+- Admin **descarta** → `estado: 'descartado'`.
+
+### 2A — Admin: publicar evento sin asignar
+- [ ] Al crear/editar un evento: quitar la selección de trabajadores. Se define `plazasPorRol`
+      y el `estado`.
+- [ ] Pantalla de **postulaciones del evento**: lista de los `pendiente`, agrupados por rol,
+      con botones **Confirmar** / **Descartar**.
+- [ ] **Cobertura en vivo por rol**: "Montaje 2/3 · Coordinador 0/1", contando `confirmado`
+      frente a `plazasPorRol`.
+- [ ] 🎯 El evento se crea y publica **aunque no se llenen las plazas**. Sin bloqueos.
+- [ ] Al confirmar, si el rol ya está lleno, avisar pero **dejar decidir al admin**.
+
+### 2B — Worker: feed de cartas
+- [ ] Sustituir la pantalla de calendario/disponibilidad por el **feed** (renombrar el ítem de
+      navegación, p.ej. "Ofertas").
+- [ ] Pila de cartas. Cada carta: título, fecha/hora, ubicación, descripción, cobro/hora y
+      **plazas libres por rol**.
+- [ ] **Derecha = postularse · Izquierda = rechazar.**
+- [ ] Al postularse: si hay **más de un rol con plazas libres**, un selector rápido "¿Para qué
+      puesto?". Si solo hay uno, se elige automáticamente.
+- [ ] **Qué cartas se muestran:** eventos con `estado == 'publicado'`, `fechaInicio` futura, y
+      sobre los que el worker **no tenga ya una postulación**.
+      ⚠️ Firestore no sabe hacer "not in" contra otra colección. Sigue el patrón del proyecto:
+      consulta los eventos publicados, consulta **sus propias** postulaciones
+      (`where trabajadorId == uid`) y **cruza/filtra en Dart**. Sin índices compuestos.
+- [ ] Pantalla **"Mis postulaciones"**: ver las pendientes y las confirmadas.
+
+### 2C — Reglas de seguridad (obligatorio, va en el mismo commit)
+- [ ] `eventos.read`: permitir si es admin, **o** el uid está en `trabajadoresIds`, **o**
+      `resource.data.estado == 'publicado'`.
+- [ ] Nueva sección `postulaciones`:
+      - worker: **lee, crea y borra solo las suyas** (`trabajadorId == uid`).
+      - worker: al crear, `estado` solo puede ser `'pendiente'` o `'rechazado_por_worker'`.
+        **Nunca puede escribir `'confirmado'`** — eso es exclusivo del admin.
+      - admin: acceso total.
+- [ ] `eventos.update` sigue siendo solo del admin (el worker NO se añade a sí mismo a
+      `trabajadoresIds`; lo hace el admin al confirmar).
+
+### 2D — Limpieza (al final, no antes)
+- [ ] Retirar `disponibilidad`: `DisponibilidadService`, `disponibilidad_provider`,
+      `modal_disponibilidad`, `calendario_screen`, el modelo y la sección de las reglas.
+- [ ] `AdminService.tieneDisponibilidad()` y todo lo que la use.
+- [ ] Borra el código, no lo dejes comentado.
+
+- [ ] `flutter analyze` limpio. Commits separados por bloque (2A, 2B, 2C, 2D). Push.
+- [ ] No mergear a `main` sin autorización.
 
 ---
 
