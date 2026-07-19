@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/fcm_service.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'dashboard/dashboard_screen.dart';
-import 'calendario/calendario_screen.dart';
+import 'feed/feed_ofertas_screen.dart';
 import 'eventos/eventos_screen.dart';
 import 'perfil/perfil_screen.dart';
 
@@ -18,7 +18,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   final List<Widget> _screens = const [
     DashboardScreen(),
-    CalendarioScreen(),
+    FeedOfertasScreen(),
     EventosScreen(),
     PerfilScreen(),
   ];

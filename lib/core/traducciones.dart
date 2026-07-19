@@ -3,6 +3,7 @@ class Traducciones {
     'es': {
       'nav_escritorio': 'Escritorio',
       'nav_calendario': 'Calendario',
+      'nav_ofertas': 'Ofertas',
       'nav_eventos': 'Eventos',
       'nav_perfil': 'Perfil',
       'proximos_eventos': 'Próximos eventos',
@@ -255,6 +256,7 @@ class Traducciones {
     'en': {
       'nav_escritorio': 'Dashboard',
       'nav_calendario': 'Calendar',
+      'nav_ofertas': 'Offers',
       'nav_eventos': 'Events',
       'nav_perfil': 'Profile',
       'proximos_eventos': 'Upcoming events',

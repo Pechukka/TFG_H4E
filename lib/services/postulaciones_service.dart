@@ -56,4 +56,42 @@ class PostulacionesService {
         .doc(postulacionId)
         .update({'estado': Postulacion.descartado});
   }
+
+  // ─── Lado worker (2B) ───────────────────────────────────────────────────────
+
+  // Todas las postulaciones del worker (se filtra por estado en Dart).
+  static Future<List<Postulacion>> misPostulaciones(String trabajadorId) async {
+    final snap = await _firestore
+        .collection(AppConstants.colPostulaciones)
+        .where('trabajadorId', isEqualTo: trabajadorId)
+        .get();
+    return snap.docs.map((d) => Postulacion.fromFirestore(d)).toList();
+  }
+
+  // Stream de las postulaciones del worker (para "Mis postulaciones").
+  static Stream<List<Postulacion>> misPostulacionesStream(String trabajadorId) {
+    return _firestore
+        .collection(AppConstants.colPostulaciones)
+        .where('trabajadorId', isEqualTo: trabajadorId)
+        .snapshots()
+        .map((s) => s.docs.map((d) => Postulacion.fromFirestore(d)).toList());
+  }
+
+  // El worker responde a una carta del feed:
+  //   swipe derecha → estado 'pendiente' (con el rol elegido)
+  //   swipe izquierda → estado 'rechazado_por_worker' (rol vacío)
+  static Future<void> responder({
+    required String eventoId,
+    required String trabajadorId,
+    required String rol,
+    required String estado,
+  }) async {
+    await _firestore.collection(AppConstants.colPostulaciones).add({
+      'eventoId': eventoId,
+      'trabajadorId': trabajadorId,
+      'rol': rol,
+      'estado': estado,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

@@ -57,9 +57,9 @@ class CustomBottomNavBar extends StatelessWidget {
             label: t.tr('nav_escritorio'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.calendar_today_outlined),
-            activeIcon: const Icon(Icons.calendar_today),
-            label: t.tr('nav_calendario'),
+            icon: const Icon(Icons.swipe_outlined),
+            activeIcon: const Icon(Icons.swipe),
+            label: t.tr('nav_ofertas'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.event_note_outlined),
