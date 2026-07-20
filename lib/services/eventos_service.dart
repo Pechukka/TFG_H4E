@@ -20,6 +20,24 @@ class EventosService {
         });
   }
 
+  // Fase 2 — feed del worker: eventos publicados y futuros.
+  // where('estado') es un filtro de campo único (no requiere índice compuesto);
+  // la fecha futura se filtra en Dart, según el patrón del proyecto.
+  Future<List<Evento>> getEventosPublicados() async {
+    final snapshot = await _firestore
+        .collection(AppConstants.colEventos)
+        .where('estado', isEqualTo: 'publicado')
+        .get();
+
+    final ahora = DateTime.now();
+    final eventos = snapshot.docs
+        .map((doc) => Evento.fromFirestore(doc))
+        .where((e) => e.fechaInicio.isAfter(ahora))
+        .toList();
+    eventos.sort((a, b) => a.fechaInicio.compareTo(b.fechaInicio));
+    return eventos;
+  }
+
   Future<Evento?> getEvento(String eventoId) async {
     final doc = await _firestore
         .collection(AppConstants.colEventos)
@@ -110,7 +128,6 @@ class EventosService {
         equipo.add({
           'id': trabajadorId,
           'nombre': info['nombre'] ?? '',
-          'telefono': info['telefono'] ?? '',
           'rol': info['rol'] ?? '',
           'esAdmin': info['esAdmin'] == true,
         });
@@ -138,7 +155,6 @@ class EventosService {
           equipo.add({
             'id': trabajadorId,
             'nombre': data['nombre'] ?? '',
-            'telefono': data['telefono'] ?? '',
             'rol': evento.trabajadoresRoles[trabajadorId] ?? '',
             'esAdmin': esAdmin,
           });

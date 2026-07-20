@@ -66,9 +66,9 @@ async function migrar() {
       }
       const u = userDoc.data();
       const nombre = `${u.nombre || ''} ${u.apellidos || ''}`.trim();
+      // NO se guarda telefono: un evento publicado es legible por cualquier worker.
       trabajadoresInfo[uid] = {
         nombre: nombre,
-        telefono: u.telefono || '',
         rol: roles[uid] || '',
         // El admin conserva su rol (Coordinador) en trabajadoresRoles, pero aquí
         // lo marcamos para que la pantalla de equipo lo pinte como "Admin".

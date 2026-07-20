@@ -122,54 +122,10 @@ class AdminService {
         .snapshots();
   }
 
-  // Comprueba si un trabajador cubre completamente el rango horario del evento.
-  // Si eventoInicio/eventoFin son null, solo comprueba que haya disponibilidad ese día.
-  // Ejemplo: worker disponible 09:00–14:00, evento 07:00–10:00 → false
-  // porque el evento empieza antes de que el worker esté disponible.
-  static Future<bool> tieneDisponibilidad(
-    String uid,
-    DateTime fecha, [
-    DateTime? eventoInicio,
-    DateTime? eventoFin,
-  ]) async {
-    final inicioDia = DateTime(fecha.year, fecha.month, fecha.day);
-    final finDia = inicioDia.add(const Duration(days: 1));
-
-    final snapshot = await _firestore
-        .collection('disponibilidad')
-        .where('trabajadorId', isEqualTo: uid)
-        .get();
-
-    // Filtramos los registros que corresponden a ese día
-    final dispDia = snapshot.docs.where((doc) {
-      final fechaDisp = (doc.data()['fecha'] as Timestamp).toDate();
-      return !fechaDisp.isBefore(inicioDia) && fechaDisp.isBefore(finDia);
-    }).toList();
-
-    if (dispDia.isEmpty) return false;
-
-    // Si no se proporcionó rango horario, basta con que haya disponibilidad ese día
-    if (eventoInicio == null || eventoFin == null) return true;
-
-    final eventoInicioMin = eventoInicio.hour * 60 + eventoInicio.minute;
-    // Si el evento cruza medianoche, el fin se representa como minutos > 1440
-    final eventoFinMin = eventoFin.day != eventoInicio.day
-        ? 1440 + eventoFin.hour * 60 + eventoFin.minute
-        : eventoFin.hour * 60 + eventoFin.minute;
-
-    // Comprobamos que algún registro cubra el rango completo del evento
-    return dispDia.any((doc) {
-      final data = doc.data();
-      final hi = data['horaInicio'] as Map<String, dynamic>?;
-      final hf = data['horaFin'] as Map<String, dynamic>?;
-      if (hi == null || hf == null) return false;
-      final dispInicioMin = (hi['hour'] as int) * 60 + (hi['minute'] as int);
-      final hfHour = hf['hour'] as int;
-      final hfMinute = hf['minute'] as int;
-      // 00:00 como horaFin = medianoche = 24:00 = 1440 min
-      final dispFinMin = (hfHour == 0 && hfMinute == 0) ? 1440 : hfHour * 60 + hfMinute;
-      return dispInicioMin <= eventoInicioMin && dispFinMin >= eventoFinMin;
-    });
+  // Stream de un evento concreto (para ver la cobertura en vivo, Fase 2).
+  static Stream<DocumentSnapshot<Map<String, dynamic>>> eventoStream(
+      String eventoId) {
+    return _firestore.collection('eventos').doc(eventoId).snapshots();
   }
 
   // ─── FASE 5: Fichajes por evento ───────────────────────────────────────────
@@ -468,51 +424,44 @@ class AdminService {
     }
   }
 
-  // Crea un evento en Firestore con todos sus datos, incluyendo
-  // los trabajadores asignados y el rol de cada uno.
+  // Fase 2: el admin publica el evento SIN asignar a nadie. Solo define las plazas
+  // por rol y el estado. Los confirmados llegan luego desde las postulaciones.
+  // Al publicar, el único participante es el admin (como Coordinador).
   static Future<void> crearEventoAdmin({
     required String titulo,
     required String descripcion,
     required String ubicacion,
     required DateTime fechaInicio,
     required DateTime fechaFin,
-    required Map<String, String> trabajadoresRoles, // {uid: rol}
-    // Info denormalizada del equipo {uid: {nombre, telefono, rol}}, admin incluido.
-    required Map<String, Map<String, dynamic>> trabajadoresInfo,
+    required Map<String, int> plazasPorRol, // {rol: nº de plazas}
+    required String estado, // 'borrador' | 'publicado' | 'finalizado'
     required String adminUid,
     required String adminNombre,
   }) async {
-    // Lista de UIDs de todos los participantes (trabajadores + admin)
-    final ids = [...trabajadoresRoles.keys, adminUid];
-
-    // Incluimos al admin en el mapa de roles con "Coordinador"
-    final rolesConAdmin = Map<String, String>.from(trabajadoresRoles);
-    rolesConAdmin[adminUid] = 'Coordinador';
-
-    final ref = await _firestore.collection('eventos').add({
+    await _firestore.collection('eventos').add({
       'titulo': titulo,
       'descripcion': descripcion,
       'ubicacion': ubicacion,
       'fechaInicio': Timestamp.fromDate(fechaInicio),
       'fechaFin': Timestamp.fromDate(fechaFin),
-      'trabajadoresIds': ids,
-      'trabajadoresRoles': rolesConAdmin,
-      'trabajadoresInfo': trabajadoresInfo,
+      'plazasPorRol': plazasPorRol,
+      'estado': estado,
+      // Sin confirmados todavía: solo el admin como Coordinador.
+      // Nota: trabajadoresInfo NO guarda teléfono (un evento publicado es legible por
+      // cualquier worker en el feed; el teléfono ajeno no debe filtrarse).
+      'trabajadoresIds': [adminUid],
+      'trabajadoresRoles': {adminUid: 'Coordinador'},
+      'trabajadoresInfo': {
+        adminUid: {
+          'nombre': adminNombre,
+          'rol': 'Coordinador',
+          'esAdmin': true,
+        },
+      },
       'rolAsignado': '',
       'cobroPorHora': 0.0,
       'creadoPor': adminUid,
     });
-
-    // Notificar a cada trabajador asignado (sin el admin)
-    for (final uid in trabajadoresRoles.keys) {
-      await _notificar(
-        uid,
-        tipo: TipoNotificacion.nuevoEvento,
-        titulo: 'Has sido asignado a un evento',
-        mensaje: titulo,
-        datos: {'eventoId': ref.id, 'tituloEvento': titulo},
-      );
-    }
   }
 
   // ─── FASE 1: Datos del dashboard admin ──────────────────────────────────────

@@ -17,9 +17,9 @@ class AppConstants {
   static const String colUsers = 'users';
   static const String colEventos = 'eventos';
   static const String colFichajes = 'fichajes';
-  static const String colDisponibilidad = 'disponibilidad';
   static const String colMensajes = 'mensajes';
   static const String colNominas = 'nominas';
+  static const String colPostulaciones = 'postulaciones';
 
   // Rutas de Storage
   static const String storageNominas = 'nominas';

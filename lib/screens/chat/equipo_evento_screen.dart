@@ -4,8 +4,6 @@ import 'package:hands4events/core/theme.dart';
 import '../../providers/eventos_provider.dart';
 import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../utils/top_snackbar.dart';
 
 class EquipoEventoScreen extends StatefulWidget {
   final String tituloEvento;
@@ -65,7 +63,6 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
     final n = _equipo.length;
     final s = t.idioma == 'en' ? (n != 1 ? 's' : '') : (n != 1 ? 's' : '');
     final sinRol = t.tr('sin_rol');
-    final sinTelefono = t.tr('sin_telefono');
 
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
@@ -134,15 +131,11 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
                         final nombre = miembro['nombre'] as String? ?? '';
                         final rol = miembro['rol'] as String? ?? '';
                         final esAdmin = miembro['esAdmin'] == true;
-                        final telefono = miembro['telefono'] as String? ?? '';
                         return _buildMiembroCard(
                           context,
-                          t: t,
                           nombre: nombre,
                           rol: esAdmin ? 'Admin' : (rol.isNotEmpty ? rol : sinRol),
-                          telefono: telefono.isNotEmpty ? telefono : sinTelefono,
                           avatar: _iniciales(nombre),
-                          sinTelefono: sinTelefono,
                         );
                       },
                     ),
@@ -155,12 +148,9 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
 
   Widget _buildMiembroCard(
     BuildContext context, {
-    required IdiomaProvider t,
     required String nombre,
     required String rol,
-    required String telefono,
     required String avatar,
-    required String sinTelefono,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -200,45 +190,7 @@ class _EquipoEventoScreenState extends State<EquipoEventoScreen> {
                         color: AppTheme.verdeNeon,
                       ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.phone, size: 14, color: AppTheme.textoTerciario),
-                    const SizedBox(width: 4),
-                    Text(
-                      telefono,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textoSecundario,
-                          ),
-                    ),
-                  ],
-                ),
               ],
-            ),
-          ),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: AppTheme.verdeNeon,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.phone, color: AppTheme.textoSobreVerde, size: 24),
-              onPressed: telefono != sinTelefono
-                  ? () async {
-                      final uri = Uri.parse('tel:$telefono');
-                      try {
-                        await launchUrl(uri);
-                      } catch (_) {
-                        if (context.mounted) {
-                          showTopSnackBar(context, t.tr('error_llamada'),
-                              backgroundColor: AppTheme.rojoError,
-                              icon: Icons.error_outline);
-                        }
-                      }
-                    }
-                  : null,
             ),
           ),
         ],
