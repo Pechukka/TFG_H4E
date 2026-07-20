@@ -128,56 +128,6 @@ class AdminService {
     return _firestore.collection('eventos').doc(eventoId).snapshots();
   }
 
-  // Comprueba si un trabajador cubre completamente el rango horario del evento.
-  // Si eventoInicio/eventoFin son null, solo comprueba que haya disponibilidad ese día.
-  // Ejemplo: worker disponible 09:00–14:00, evento 07:00–10:00 → false
-  // porque el evento empieza antes de que el worker esté disponible.
-  static Future<bool> tieneDisponibilidad(
-    String uid,
-    DateTime fecha, [
-    DateTime? eventoInicio,
-    DateTime? eventoFin,
-  ]) async {
-    final inicioDia = DateTime(fecha.year, fecha.month, fecha.day);
-    final finDia = inicioDia.add(const Duration(days: 1));
-
-    final snapshot = await _firestore
-        .collection('disponibilidad')
-        .where('trabajadorId', isEqualTo: uid)
-        .get();
-
-    // Filtramos los registros que corresponden a ese día
-    final dispDia = snapshot.docs.where((doc) {
-      final fechaDisp = (doc.data()['fecha'] as Timestamp).toDate();
-      return !fechaDisp.isBefore(inicioDia) && fechaDisp.isBefore(finDia);
-    }).toList();
-
-    if (dispDia.isEmpty) return false;
-
-    // Si no se proporcionó rango horario, basta con que haya disponibilidad ese día
-    if (eventoInicio == null || eventoFin == null) return true;
-
-    final eventoInicioMin = eventoInicio.hour * 60 + eventoInicio.minute;
-    // Si el evento cruza medianoche, el fin se representa como minutos > 1440
-    final eventoFinMin = eventoFin.day != eventoInicio.day
-        ? 1440 + eventoFin.hour * 60 + eventoFin.minute
-        : eventoFin.hour * 60 + eventoFin.minute;
-
-    // Comprobamos que algún registro cubra el rango completo del evento
-    return dispDia.any((doc) {
-      final data = doc.data();
-      final hi = data['horaInicio'] as Map<String, dynamic>?;
-      final hf = data['horaFin'] as Map<String, dynamic>?;
-      if (hi == null || hf == null) return false;
-      final dispInicioMin = (hi['hour'] as int) * 60 + (hi['minute'] as int);
-      final hfHour = hf['hour'] as int;
-      final hfMinute = hf['minute'] as int;
-      // 00:00 como horaFin = medianoche = 24:00 = 1440 min
-      final dispFinMin = (hfHour == 0 && hfMinute == 0) ? 1440 : hfHour * 60 + hfMinute;
-      return dispInicioMin <= eventoInicioMin && dispFinMin >= eventoFinMin;
-    });
-  }
-
   // ─── FASE 5: Fichajes por evento ───────────────────────────────────────────
 
   // Devuelve todos los fichajes de un evento (de todos los trabajadores).

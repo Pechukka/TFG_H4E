@@ -9,7 +9,6 @@ import 'providers/eventos_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/fichaje_provider.dart';
 import 'providers/nominas_provider.dart';
-import 'providers/disponibilidad_provider.dart';
 import 'providers/notificaciones_provider.dart';
 import 'providers/idioma_provider.dart';
 import 'screens/auth/login_screen.dart';
@@ -43,7 +42,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FichajeProvider()),
         ChangeNotifierProvider(create: (_) => NominasProvider()),
         ChangeNotifierProvider(create: (_) => NotificacionesProvider()),
-        ChangeNotifierProvider(create: (_) => DisponibilidadProvider()),
         ChangeNotifierProvider(create: (_) => IdiomaProvider()),
       ],
       child: MaterialApp(
