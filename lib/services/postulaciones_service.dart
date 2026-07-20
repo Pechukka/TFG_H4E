@@ -28,7 +28,6 @@ class PostulacionesService {
     required String trabajadorId,
     required String rol,
     required String nombre,
-    required String telefono,
   }) async {
     final eventoRef =
         _firestore.collection(AppConstants.colEventos).doc(eventoId);
@@ -39,9 +38,9 @@ class PostulacionesService {
     batch.update(eventoRef, {
       'trabajadoresIds': FieldValue.arrayUnion([trabajadorId]),
       'trabajadoresRoles.$trabajadorId': rol,
+      // trabajadoresInfo NO guarda teléfono (evita filtrarlo en el feed).
       'trabajadoresInfo.$trabajadorId': {
         'nombre': nombre,
-        'telefono': telefono,
         'rol': rol,
       },
     });

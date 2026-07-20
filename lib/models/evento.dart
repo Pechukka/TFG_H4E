@@ -13,10 +13,10 @@ class Evento {
   // Mapa que guarda el rol de cada trabajador: {uid: nombreRol}
   // Solo lo usa el panel de admin — la app worker lo ignora
   final Map<String, String> trabajadoresRoles;
-  // Info denormalizada del equipo: {uid: {nombre, telefono, rol}}.
-  // Se guarda aquí para que el worker vea el equipo sin leer la colección users
-  // (la regla de Firestore le prohíbe leer los docs de otros usuarios).
-  // Desde la Fase 2 significa los CONFIRMADOS por el admin.
+  // Info denormalizada del equipo: {uid: {nombre, rol, esAdmin?}} — SIN teléfono
+  // (un evento publicado es legible por cualquier worker en el feed; no se filtran
+  // teléfonos ajenos). Se guarda aquí para que el worker vea el equipo sin leer la
+  // colección users. Desde la Fase 2 significa los CONFIRMADOS por el admin.
   final Map<String, Map<String, dynamic>> trabajadoresInfo;
   // Fase 2: plazas objetivo por rol {rol: nº}. Ej. {'H4ndMontaje': 3, 'Coordinador': 1}
   final Map<String, int> plazasPorRol;

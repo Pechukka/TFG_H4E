@@ -128,7 +128,6 @@ class EventosService {
         equipo.add({
           'id': trabajadorId,
           'nombre': info['nombre'] ?? '',
-          'telefono': info['telefono'] ?? '',
           'rol': info['rol'] ?? '',
           'esAdmin': info['esAdmin'] == true,
         });
@@ -156,7 +155,6 @@ class EventosService {
           equipo.add({
             'id': trabajadorId,
             'nombre': data['nombre'] ?? '',
-            'telefono': data['telefono'] ?? '',
             'rol': evento.trabajadoresRoles[trabajadorId] ?? '',
             'esAdmin': esAdmin,
           });

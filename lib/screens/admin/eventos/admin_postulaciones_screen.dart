@@ -40,10 +40,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
     setState(() {
       _workers = {
         for (final w in lista)
-          (w['uid'] as String): {
-            'nombre': w['nombre'] ?? '',
-            'telefono': w['telefono'] ?? '',
-          }
+          (w['uid'] as String): {'nombre': w['nombre'] ?? ''}
       };
       _cargandoWorkers = false;
     });
@@ -323,7 +320,6 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         trabajadorId: p.trabajadorId,
         rol: p.rol,
         nombre: (info?['nombre'] as String?) ?? '',
-        telefono: (info?['telefono'] as String?) ?? '',
       );
       if (mounted) {
         showTopSnackBar(context, 'Trabajador confirmado',

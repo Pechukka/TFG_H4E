@@ -487,7 +487,6 @@ class AdminService {
     required String estado, // 'borrador' | 'publicado' | 'finalizado'
     required String adminUid,
     required String adminNombre,
-    required String adminTelefono,
   }) async {
     await _firestore.collection('eventos').add({
       'titulo': titulo,
@@ -498,12 +497,13 @@ class AdminService {
       'plazasPorRol': plazasPorRol,
       'estado': estado,
       // Sin confirmados todavía: solo el admin como Coordinador.
+      // Nota: trabajadoresInfo NO guarda teléfono (un evento publicado es legible por
+      // cualquier worker en el feed; el teléfono ajeno no debe filtrarse).
       'trabajadoresIds': [adminUid],
       'trabajadoresRoles': {adminUid: 'Coordinador'},
       'trabajadoresInfo': {
         adminUid: {
           'nombre': adminNombre,
-          'telefono': adminTelefono,
           'rol': 'Coordinador',
           'esAdmin': true,
         },
