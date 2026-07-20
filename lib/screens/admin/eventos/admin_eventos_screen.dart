@@ -597,10 +597,17 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
   }
 
   Future<void> _seleccionarFecha() async {
+    // Base = fecha ya seleccionada (o hoy si es nuevo). El firstDate nunca puede ser
+    // posterior a esa base: al editar un evento pasado, su fecha real debe quedar dentro
+    // del rango para que el calendario abra en ella y permita cambiarla.
+    final base = _fechaSeleccionada ?? DateTime.now();
+    final ayer = DateTime.now().subtract(const Duration(days: 1));
+    final firstDate = base.isBefore(ayer) ? base : ayer;
+
     final fecha = await showDatePicker(
       context: context,
-      initialDate: _fechaSeleccionada ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      initialDate: base,
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
