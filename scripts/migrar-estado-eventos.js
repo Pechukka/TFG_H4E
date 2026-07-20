@@ -5,8 +5,10 @@
 //   - Les pone un plazasPorRol por defecto si no lo tienen (AJÚSTALO abajo).
 //   - Les pone creadoPor si falta (lo deduce del admin en trabajadoresInfo, o usa
 //     un uid por defecto que debes rellenar).
+//   - Borra trabajadoresInfo.*.telefono de los eventos que aún lo tengan (el código
+//     ya no lo escribe, pero los docs antiguos podían tenerlo → fuga en el feed).
 //
-// Es IDEMPOTENTE: un evento que ya tenga estado NO se toca. Se puede repetir sin miedo.
+// Es IDEMPOTENTE: solo escribe si hay algo que cambiar. Se puede repetir sin miedo.
 //
 // Cómo ejecutarlo:
 //   1. cd scripts
@@ -49,43 +51,63 @@ function buscarAdminUid(data) {
 async function migrar() {
   const eventosSnap = await db.collection('eventos').get();
 
-  let migrados = 0;
-  let yaEstaban = 0;
+  let actualizados = 0;
+  let sinCambios = 0;
 
   for (const eventoDoc of eventosSnap.docs) {
     const data = eventoDoc.data();
     const titulo = data.titulo || '(sin título)';
 
-    // Idempotencia: si ya tiene estado, no tocar.
-    if (data.estado && String(data.estado).length > 0) {
-      console.log(`= Ya tiene estado ("${data.estado}"): "${titulo}" (${eventoDoc.id})`);
-      yaEstaban++;
+    const cambios = {};
+    const notas = [];
+
+    // 1. estado/plazasPorRol/creadoPor: solo si aún no tiene estado.
+    if (!data.estado || String(data.estado).length === 0) {
+      cambios.estado = 'publicado';
+      notas.push("estado='publicado'");
+
+      if (!data.plazasPorRol || Object.keys(data.plazasPorRol).length === 0) {
+        cambios.plazasPorRol = PLAZAS_POR_DEFECTO;
+        notas.push('plazasPorRol');
+      }
+
+      if (!data.creadoPor) {
+        const adminUid = buscarAdminUid(data) || ADMIN_UID_POR_DEFECTO;
+        if (adminUid) {
+          cambios.creadoPor = adminUid;
+          notas.push('creadoPor');
+        }
+      }
+    }
+
+    // 2. Limpiar telefono de trabajadoresInfo SIEMPRE (aunque el evento ya esté
+    //    migrado): los docs antiguos podían tenerlo y no debe filtrarse en el feed.
+    const info = data.trabajadoresInfo || {};
+    let telefonos = 0;
+    for (const [uid, datos] of Object.entries(info)) {
+      if (datos && datos.telefono !== undefined) {
+        cambios[`trabajadoresInfo.${uid}.telefono`] =
+          admin.firestore.FieldValue.delete();
+        telefonos++;
+      }
+    }
+    if (telefonos > 0) notas.push(`quita ${telefonos} telefono(s)`);
+
+    // Idempotencia: si no hay nada que cambiar, no se escribe.
+    if (Object.keys(cambios).length === 0) {
+      console.log(`= Nada que hacer: "${titulo}" (${eventoDoc.id})`);
+      sinCambios++;
       continue;
     }
 
-    const cambios = { estado: 'publicado' };
-
-    // plazasPorRol por defecto si no lo tiene
-    if (!data.plazasPorRol || Object.keys(data.plazasPorRol).length === 0) {
-      cambios.plazasPorRol = PLAZAS_POR_DEFECTO;
-    }
-
-    // creadoPor si falta
-    if (!data.creadoPor) {
-      const adminUid = buscarAdminUid(data) || ADMIN_UID_POR_DEFECTO;
-      if (adminUid) cambios.creadoPor = adminUid;
-    }
-
     await eventoDoc.ref.update(cambios);
-    console.log(
-      `+ Migrado: "${titulo}" (${eventoDoc.id}) — ${JSON.stringify(cambios)}`,
-    );
-    migrados++;
+    console.log(`+ Actualizado: "${titulo}" (${eventoDoc.id}) — ${notas.join(', ')}`);
+    actualizados++;
   }
 
   console.log('\n──────── Resumen ────────');
-  console.log(`Migrados ahora:      ${migrados}`);
-  console.log(`Ya tenían estado:    ${yaEstaban}`);
+  console.log(`Actualizados ahora:  ${actualizados}`);
+  console.log(`Sin cambios:         ${sinCambios}`);
   console.log(`Total eventos:       ${eventosSnap.size}`);
 }
 
