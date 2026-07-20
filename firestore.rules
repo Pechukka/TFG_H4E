@@ -40,11 +40,29 @@ service cloud.firestore {
     }
 
     // ---------- eventos ----------
-    // El worker lee los eventos donde está asignado. Solo el admin crea/edita/borra.
+    // Lee: el admin, el worker asignado (confirmado), o cualquier worker logueado si el
+    // evento está 'publicado' (necesario para el feed tipo Tinder). Los eventos antiguos
+    // sin 'estado' NO son legibles por workers no asignados, y eso es correcto.
+    // Solo el admin crea/edita/borra: el worker NO se añade a sí mismo a trabajadoresIds.
     match /eventos/{eventoId} {
       allow read: if esAdmin()
-        || (estaLogueado() && request.auth.uid in resource.data.trabajadoresIds);
+        || (estaLogueado() && request.auth.uid in resource.data.trabajadoresIds)
+        || (estaLogueado() && resource.data.estado == 'publicado');
       allow create, update, delete: if esAdmin();
+    }
+
+    // ---------- postulaciones (respuestas del worker al feed) ----------
+    // El worker lee, crea y borra SOLO las suyas. Al crear, el estado solo puede ser
+    // 'pendiente' o 'rechazado_por_worker' — nunca 'confirmado' (eso es del admin).
+    // La actualización (confirmar/descartar) es exclusiva del admin.
+    match /postulaciones/{postulacionId} {
+      allow read: if esAdmin() || esMio(resource.data.trabajadorId);
+      allow create: if esAdmin()
+        || (esMio(request.resource.data.trabajadorId)
+            && (request.resource.data.estado == 'pendiente'
+                || request.resource.data.estado == 'rechazado_por_worker'));
+      allow delete: if esAdmin() || esMio(resource.data.trabajadorId);
+      allow update: if esAdmin();
     }
 
     // ---------- disponibilidad ----------
