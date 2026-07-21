@@ -6,10 +6,12 @@ import '../../core/roles.dart';
 import '../../models/evento.dart';
 import '../../models/postulacion.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notificaciones_provider.dart';
 import '../../services/eventos_service.dart';
 import '../../services/postulaciones_service.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../utils/top_snackbar.dart';
+import '../notificaciones/notificaciones_screen.dart';
 import 'mis_postulaciones_screen.dart';
 
 // Feed de ofertas (tipo Tinder): el worker se postula (derecha) o rechaza (izquierda).
@@ -37,6 +39,12 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   Future<void> _cargar() async {
     setState(() => _cargando = true);
     final uid = context.read<AuthProvider>().currentUserId ?? '';
+
+    // La campanita necesita el stream de notificaciones (el provider ignora
+    // llamadas repetidas, así que es seguro pedirlo también desde aquí).
+    if (uid.isNotEmpty) {
+      context.read<NotificacionesProvider>().cargarNotificaciones(uid);
+    }
 
     final eventos = await _eventosService.getEventosPublicados();
     final misPost = await PostulacionesService.misPostulaciones(uid);
@@ -156,12 +164,31 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final noLeidas = context.watch<NotificacionesProvider>().noLeidas;
+
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       appBar: AppBarCustom(
         showLogo: true,
         title: 'Ofertas',
         actions: [
+          // Campanita con el nº de notificaciones sin leer
+          IconButton(
+            icon: Badge(
+              isLabelVisible: noLeidas > 0,
+              label: Text(noLeidas > 9 ? '9+' : '$noLeidas'),
+              backgroundColor: AppTheme.rojoError,
+              textStyle:
+                  const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+              child: const Icon(Icons.notifications_none,
+                  color: AppTheme.textoBlanco, size: 22),
+            ),
+            tooltip: 'Notificaciones',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.assignment_outlined,
                 color: AppTheme.textoBlanco, size: 22),

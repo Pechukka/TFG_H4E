@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants.dart';
+import '../models/notificacion.dart';
 import '../models/postulacion.dart';
 
 // Servicio de la colección `postulaciones` (Fase 2).
@@ -28,6 +29,7 @@ class PostulacionesService {
     required String trabajadorId,
     required String rol,
     required String nombre,
+    required String tituloEvento,
   }) async {
     final eventoRef =
         _firestore.collection(AppConstants.colEventos).doc(eventoId);
@@ -45,6 +47,23 @@ class PostulacionesService {
       },
     });
     batch.update(postulacionRef, {'estado': Postulacion.confirmado});
+
+    // Notificación al worker, en el MISMO batch: si la confirmación se aplica, el
+    // aviso también. La Cloud Function onNotificacionCreada la convierte en push.
+    // Se usan los campos del esquema existente (tipo enum + `timestamp`).
+    final titulo = tituloEvento.isEmpty ? 'el evento' : tituloEvento;
+    final notificacionRef =
+        _firestore.collection(AppConstants.colNotificaciones).doc();
+    batch.set(notificacionRef, {
+      'trabajadorId': trabajadorId,
+      'tipo': TipoNotificacion.confirmacion.toString(),
+      'titulo': 'Te han confirmado',
+      'mensaje': 'Estás confirmado en $titulo como $rol',
+      'timestamp': FieldValue.serverTimestamp(),
+      'leida': false,
+      'datos': {'eventoId': eventoId, 'tituloEvento': titulo},
+    });
+
     await batch.commit();
   }
 
