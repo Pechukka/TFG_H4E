@@ -30,6 +30,13 @@ service cloud.firestore {
             && request.auth.uid in get(/databases/$(database)/documents/eventos/$(eventoId)).data.trabajadoresIds);
     }
 
+    // ¿El evento existe y está publicado? Null-safe: si no existe, false; si no tiene
+    // campo `estado` (evento antiguo), la comparación da false y también deniega.
+    function eventoPublicado(eventoId) {
+      return exists(/databases/$(database)/documents/eventos/$(eventoId))
+        && get(/databases/$(database)/documents/eventos/$(eventoId)).data.estado == 'publicado';
+    }
+
     // ---------- users ----------
     // Cada worker lee y edita SOLO su propio perfil. El admin gestiona todos.
     match /users/{userId} {
@@ -53,14 +60,17 @@ service cloud.firestore {
 
     // ---------- postulaciones (respuestas del worker al feed) ----------
     // El worker lee, crea y borra SOLO las suyas. Al crear, el estado solo puede ser
-    // 'pendiente' o 'rechazado_por_worker' — nunca 'confirmado' (eso es del admin).
+    // 'pendiente' o 'rechazado_por_worker' — nunca 'confirmado' (eso es del admin) — y
+    // el evento debe estar 'publicado' (no se puede postular a un borrador ni a uno
+    // finalizado, aunque se forje la petición fuera de la app).
     // La actualización (confirmar/descartar) es exclusiva del admin.
     match /postulaciones/{postulacionId} {
       allow read: if esAdmin() || esMio(resource.data.trabajadorId);
       allow create: if esAdmin()
         || (esMio(request.resource.data.trabajadorId)
             && (request.resource.data.estado == 'pendiente'
-                || request.resource.data.estado == 'rechazado_por_worker'));
+                || request.resource.data.estado == 'rechazado_por_worker')
+            && eventoPublicado(request.resource.data.eventoId));
       allow delete: if esAdmin() || esMio(resource.data.trabajadorId);
       allow update: if esAdmin();
     }
