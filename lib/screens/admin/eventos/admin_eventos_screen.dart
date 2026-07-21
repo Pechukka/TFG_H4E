@@ -18,8 +18,8 @@ class AdminEventosScreen extends StatefulWidget {
   State<AdminEventosScreen> createState() => _AdminEventosScreenState();
 }
 
-// Filtro por estado (derivado de las fechas, no hay campo estado hasta Fase 3)
-enum _FiltroEstado { todos, proximos, enCurso, finalizados }
+// Filtro por el campo `estado` del evento (borrador | publicado | finalizado).
+enum _FiltroEstado { todos, borrador, publicado, finalizado }
 
 class _AdminEventosScreenState extends State<AdminEventosScreen> {
   // Si es true, mostramos el formulario de crear evento en vez de la lista
@@ -107,31 +107,32 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     );
   }
 
-  // Aplica el filtro por estado (derivado de fechas) y por fecha concreta.
+  // Aplica el filtro por el campo `estado` y por fecha concreta.
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _aplicarFiltros(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
-    final ahora = DateTime.now();
     return docs.where((doc) {
       final data = doc.data();
       final inicioTs = data['fechaInicio'];
-      final finTs = data['fechaFin'];
-      if (inicioTs is! Timestamp || finTs is! Timestamp) return false;
+      if (inicioTs is! Timestamp) return false;
       final inicio = inicioTs.toDate();
-      final fin = finTs.toDate();
+
+      // Estado del evento (eventos antiguos sin estado → publicado)
+      final estadoRaw = (data['estado'] as String?) ?? '';
+      final estadoVista = estadoRaw.isEmpty ? 'publicado' : estadoRaw;
 
       // Filtro por estado
       switch (_filtroEstado) {
         case _FiltroEstado.todos:
           break;
-        case _FiltroEstado.proximos:
-          if (!inicio.isAfter(ahora)) return false;
+        case _FiltroEstado.borrador:
+          if (estadoVista != 'borrador') return false;
           break;
-        case _FiltroEstado.enCurso:
-          if (!(ahora.isAfter(inicio) && ahora.isBefore(fin))) return false;
+        case _FiltroEstado.publicado:
+          if (estadoVista != 'publicado') return false;
           break;
-        case _FiltroEstado.finalizados:
-          if (!ahora.isAfter(fin)) return false;
+        case _FiltroEstado.finalizado:
+          if (estadoVista != 'finalizado') return false;
           break;
       }
 
@@ -153,11 +154,11 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
       children: [
         _chipEstado('Todos', _FiltroEstado.todos),
         const SizedBox(width: 8),
-        _chipEstado('Próximos', _FiltroEstado.proximos),
+        _chipEstado('Borradores', _FiltroEstado.borrador),
         const SizedBox(width: 8),
-        _chipEstado('En curso', _FiltroEstado.enCurso),
+        _chipEstado('Publicados', _FiltroEstado.publicado),
         const SizedBox(width: 8),
-        _chipEstado('Finalizados', _FiltroEstado.finalizados),
+        _chipEstado('Finalizados', _FiltroEstado.finalizado),
         const Spacer(),
         // Filtro por fecha
         OutlinedButton.icon(
@@ -309,13 +310,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                       child: Text(titulo,
                           style: Theme.of(context).textTheme.titleSmall),
                     ),
-                    if (estadoVista == 'borrador') ...[
-                      const SizedBox(width: 8),
-                      _badgeEstado('BORRADOR', AppTheme.amarilloAdvertencia),
-                    ] else if (estadoVista == 'finalizado') ...[
-                      const SizedBox(width: 8),
-                      _badgeEstado('FINALIZADO', AppTheme.textoTerciario),
-                    ],
+                    const SizedBox(width: 8),
+                    _estadoControl(doc.id, estadoVista),
                     if (enCurso) ...[
                       const SizedBox(width: 8),
                       Container(
@@ -413,18 +409,88 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     );
   }
 
-  Widget _badgeEstado(String texto, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color),
+  // Colores y etiquetas de cada estado (centralizado para tarjeta + menú).
+  static const Map<String, Color> _coloresEstado = {
+    'borrador': AppTheme.amarilloAdvertencia,
+    'publicado': AppTheme.verdeNeon,
+    'finalizado': AppTheme.textoTerciario,
+  };
+  static const Map<String, String> _labelsEstado = {
+    'borrador': 'Borrador',
+    'publicado': 'Publicado',
+    'finalizado': 'Finalizado',
+  };
+
+  // Control para cambiar el estado del evento (borrador → publicado → finalizado).
+  // Muestra el estado actual como chip y abre un menú con los tres estados.
+  Widget _estadoControl(String eventoId, String estadoActual) {
+    final color = _coloresEstado[estadoActual] ?? AppTheme.verdeNeon;
+    final label = _labelsEstado[estadoActual] ?? 'Publicado';
+
+    return PopupMenuButton<String>(
+      tooltip: 'Cambiar estado',
+      color: AppTheme.fondoCard,
+      onSelected: (nuevo) => _cambiarEstado(eventoId, nuevo, estadoActual),
+      itemBuilder: (_) => ['borrador', 'publicado', 'finalizado'].map((e) {
+        final c = _coloresEstado[e]!;
+        final activo = e == estadoActual;
+        return PopupMenuItem<String>(
+          value: e,
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 10),
+              Text(_labelsEstado[e]!,
+                  style: TextStyle(
+                      color: activo ? c : AppTheme.textoBlanco,
+                      fontSize: 13,
+                      fontWeight:
+                          activo ? FontWeight.w600 : FontWeight.normal)),
+            ],
+          ),
+        );
+      }).toList(),
+      child: Container(
+        padding: const EdgeInsets.only(left: 7, right: 2, top: 2, bottom: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label.toUpperCase(),
+                style: TextStyle(
+                    color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+            Icon(Icons.arrow_drop_down, color: color, size: 14),
+          ],
+        ),
       ),
-      child: Text(texto,
-          style: TextStyle(
-              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
     );
+  }
+
+  Future<void> _cambiarEstado(
+      String eventoId, String nuevo, String actual) async {
+    if (nuevo == actual) return;
+    try {
+      await AdminService.actualizarEstadoEvento(eventoId, nuevo);
+      if (mounted) {
+        showTopSnackBar(context,
+            'Evento marcado como ${_labelsEstado[nuevo] ?? nuevo}',
+            backgroundColor: AppTheme.verdeNeon,
+            icon: Icons.check_circle_outline);
+      }
+    } catch (_) {
+      if (mounted) {
+        showTopSnackBar(context, 'No se pudo cambiar el estado',
+            backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
+      }
+    }
   }
 
   Future<void> _confirmarEliminar(

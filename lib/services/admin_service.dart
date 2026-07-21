@@ -405,6 +405,16 @@ class AdminService {
     await _firestore.collection('eventos').doc(eventoId).delete();
   }
 
+  // Fase 3: cambia solo el estado del evento (borrador | publicado | finalizado).
+  // No notifica ni toca los confirmados; el feed ya filtra por estado == 'publicado'.
+  static Future<void> actualizarEstadoEvento(
+      String eventoId, String estado) async {
+    await _firestore
+        .collection('eventos')
+        .doc(eventoId)
+        .update({'estado': estado});
+  }
+
   // Actualiza un evento en Firestore y notifica a los trabajadores de los cambios.
   static Future<void> actualizarEvento(
     String eventoId, {
