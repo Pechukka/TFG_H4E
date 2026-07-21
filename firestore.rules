@@ -101,6 +101,21 @@ service cloud.firestore {
       allow create, update, delete: if esAdmin();
     }
 
+    // ---------- notificaciones ----------
+    // El worker lee, marca como leída y borra SOLO las suyas. Las crea el admin (al
+    // confirmar una postulación); la Cloud Function onNotificacionCreada corre con
+    // privilegios de admin y no pasa por estas reglas.
+    match /notificaciones/{notificacionId} {
+      allow read: if esAdmin() || esMio(resource.data.trabajadorId);
+      allow create: if esAdmin();
+      // En su propia notificación, el worker solo puede tocar el campo `leida`.
+      allow update: if esAdmin()
+        || (esMio(resource.data.trabajadorId)
+            && request.resource.data.diff(resource.data)
+                 .affectedKeys().hasOnly(['leida']));
+      allow delete: if esAdmin() || esMio(resource.data.trabajadorId);
+    }
+
     // ---------- Por defecto: denegado ----------
     // Todo lo que no encaje arriba queda bloqueado explícitamente.
     match /{document=**} {
