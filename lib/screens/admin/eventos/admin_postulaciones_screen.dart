@@ -320,6 +320,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         trabajadorId: p.trabajadorId,
         rol: p.rol,
         nombre: (info?['nombre'] as String?) ?? '',
+        tituloEvento: widget.tituloEvento,
       );
       if (mounted) {
         showTopSnackBar(context, 'Trabajador confirmado',

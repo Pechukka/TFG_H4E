@@ -8,6 +8,8 @@ enum TipoNotificacion {
   cambioEvento,
   recordatorio,
   eventoCancelado,
+  // Fase 3: el admin ha confirmado al worker en un evento
+  confirmacion,
   sistema,
 }
 

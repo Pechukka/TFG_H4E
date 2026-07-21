@@ -134,6 +134,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
         break;
 
+      case TipoNotificacion.confirmacion:
+        // Te han confirmado en un evento — abrir su detalle
+        final eventoIdConfirmacion = notif.datos?['eventoId'];
+        if (eventoIdConfirmacion != null) {
+          final evento =
+              await context.read<EventosProvider>().fetchEvento(eventoIdConfirmacion);
+          if (mounted && evento != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleEventoScreen(evento: evento),
+              ),
+            );
+          }
+        }
+        break;
+
       case TipoNotificacion.eventoCancelado:
         // El evento ya no existe — solo marcar como leída
         break;
