@@ -75,17 +75,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final eventoId = notif.datos?['eventoId'];
         final tituloEvento = notif.datos?['tituloEvento'] ?? 'Evento';
         if (eventoId != null) {
-          // El chat solo se abre si el grupo está creado (estado == 'activo').
+          // Chat según el estado: activo = escribible, finalizado = solo lectura,
+          // resto = cerrado con aviso.
           final evento =
               await context.read<EventosProvider>().fetchEvento(eventoId);
           if (!mounted) break;
-          if (evento != null && evento.estado == 'activo') {
+          final estadoEv = evento?.estado ?? '';
+          if (estadoEv == 'activo' || estadoEv == 'finalizado') {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ChatEventoScreen(
                   tituloEvento: tituloEvento,
                   eventoId: eventoId,
+                  soloLectura: estadoEv == 'finalizado',
                 ),
               ),
             );

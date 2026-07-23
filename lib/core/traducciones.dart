@@ -180,6 +180,8 @@ class Traducciones {
       'ir_chat': 'CHAT',
       'grupo_no_creado': 'GRUPO NO CREADO',
       'grupo_aviso': 'El grupo aún no está creado',
+      'ver_historico': 'VER HISTÓRICO',
+      'evento_finalizado_lectura': 'Evento finalizado · solo lectura',
       // Perfil nominas
       'ver_mis_nominas': 'Ver mis nóminas',
       // Modal idioma
@@ -418,6 +420,8 @@ class Traducciones {
       'ir_chat': 'CHAT',
       'grupo_no_creado': 'GROUP NOT CREATED',
       'grupo_aviso': 'The group has not been created yet',
+      'ver_historico': 'VIEW HISTORY',
+      'evento_finalizado_lectura': 'Event finished · read only',
       // Perfil nominas
       'ver_mis_nominas': 'View my payslips',
       // Modal idioma

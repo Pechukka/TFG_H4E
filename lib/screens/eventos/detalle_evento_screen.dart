@@ -189,35 +189,51 @@ class DetalleEventoScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    // El chat solo se abre si el grupo está creado (estado == 'activo').
+                    // Chat según el estado del evento:
+                    //  activo      → abierto y escribible
+                    //  finalizado  → abierto en solo lectura (histórico)
+                    //  resto       → cerrado, con aviso "grupo no creado"
                     child: evento.estado == 'activo'
                         ? CustomOutlineButton(
                             text: t.tr('ir_chat'),
                             icon: Icons.chat_bubble_outline,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ChatEventoScreen(
-                                    tituloEvento: evento.titulo,
-                                    eventoId: evento.id,
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatEventoScreen(
+                                  tituloEvento: evento.titulo,
+                                  eventoId: evento.id,
+                                ),
+                              ),
+                            ),
+                          )
+                        : evento.estado == 'finalizado'
+                            ? CustomOutlineButton(
+                                text: t.tr('ver_historico'),
+                                icon: Icons.history,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatEventoScreen(
+                                      tituloEvento: evento.titulo,
+                                      eventoId: evento.id,
+                                      soloLectura: true,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
-                          )
-                        : CustomOutlineButton(
-                            text: t.tr('grupo_no_creado'),
-                            icon: Icons.lock_outline,
-                            borderColor: AppTheme.textoTerciario,
-                            textColor: AppTheme.textoTerciario,
-                            onPressed: () => showTopSnackBar(
-                              context,
-                              t.tr('grupo_aviso'),
-                              backgroundColor: AppTheme.amarilloAdvertencia,
-                              icon: Icons.info_outline,
-                            ),
-                          ),
+                              )
+                            : CustomOutlineButton(
+                                text: t.tr('grupo_no_creado'),
+                                icon: Icons.lock_outline,
+                                borderColor: AppTheme.textoTerciario,
+                                textColor: AppTheme.textoTerciario,
+                                onPressed: () => showTopSnackBar(
+                                  context,
+                                  t.tr('grupo_aviso'),
+                                  backgroundColor: AppTheme.amarilloAdvertencia,
+                                  icon: Icons.info_outline,
+                                ),
+                              ),
                   ),
 
                   const SizedBox(width: 12),
