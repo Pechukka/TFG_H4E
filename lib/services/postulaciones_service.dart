@@ -111,6 +111,70 @@ class PostulacionesService {
     await batch.commit();
   }
 
+  // Fase 5C: el admin añade a un worker directamente al evento (estilo grupo de
+  // WhatsApp), respetando el cupo. NO crea postulación. Lanza RolCompletoException si
+  // el rol ya está lleno. No auto-activa: el admin activa el grupo cuando quiere.
+  static Future<void> anadirIntegrante({
+    required String eventoId,
+    required String trabajadorId,
+    required String rol,
+    required String nombre,
+  }) async {
+    final eventoRef =
+        _firestore.collection(AppConstants.colEventos).doc(eventoId);
+    final snap = await eventoRef.get();
+    final data = snap.data() ?? {};
+    final plazas = (data['plazasPorRol'] as Map<String, dynamic>? ?? {})
+        .map((k, v) => MapEntry(k, (v as num).toInt()));
+    final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
+    final creadoPor = data['creadoPor'] as String?;
+
+    if (roles.containsKey(trabajadorId)) return; // ya es miembro: nada que hacer
+
+    final confirmadosDelRol = roles.entries
+        .where((e) => e.key != creadoPor && e.value == rol)
+        .length;
+    if (confirmadosDelRol >= (plazas[rol] ?? 0)) {
+      throw RolCompletoException(rol);
+    }
+
+    await eventoRef.update({
+      'trabajadoresIds': FieldValue.arrayUnion([trabajadorId]),
+      'trabajadoresRoles.$trabajadorId': rol,
+      'trabajadoresInfo.$trabajadorId': {'nombre': nombre, 'rol': rol},
+    });
+  }
+
+  // Fase 5C: el admin quita a un integrante del evento. Lo saca de
+  // trabajadoresIds/Roles/Info y, si tenía postulación en este evento, la pasa a
+  // 'descartado'. Libera la plaza. Todo en un batch (atómico).
+  static Future<void> quitarIntegrante({
+    required String eventoId,
+    required String trabajadorId,
+  }) async {
+    final eventoRef =
+        _firestore.collection(AppConstants.colEventos).doc(eventoId);
+
+    // Postulaciones del worker en este evento (query de campo único + filtro en Dart).
+    final postSnap = await _firestore
+        .collection(AppConstants.colPostulaciones)
+        .where('trabajadorId', isEqualTo: trabajadorId)
+        .get();
+    final delEvento =
+        postSnap.docs.where((d) => d.data()['eventoId'] == eventoId).toList();
+
+    final batch = _firestore.batch();
+    batch.update(eventoRef, {
+      'trabajadoresIds': FieldValue.arrayRemove([trabajadorId]),
+      'trabajadoresRoles.$trabajadorId': FieldValue.delete(),
+      'trabajadoresInfo.$trabajadorId': FieldValue.delete(),
+    });
+    for (final d in delEvento) {
+      batch.update(d.reference, {'estado': Postulacion.descartado});
+    }
+    await batch.commit();
+  }
+
   // El admin descarta una postulación (no añade al worker al evento).
   static Future<void> descartar(String postulacionId) async {
     await _firestore

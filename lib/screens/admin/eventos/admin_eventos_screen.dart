@@ -894,6 +894,28 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
       return;
     }
 
+    // Guarda 5C: al editar no se puede bajar un rol por debajo de sus confirmados
+    // actuales. Subir plazas siempre se permite. (Quitar integrantes es aparte.)
+    if (_esEdicion) {
+      final data = widget.eventoExistente!.data();
+      final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
+      final creadoPor = data['creadoPor'] as String?;
+      final confirmadosPorRol = <String, int>{};
+      roles.forEach((uid, rol) {
+        if (uid == creadoPor) return;
+        confirmadosPorRol[rol] = (confirmadosPorRol[rol] ?? 0) + 1;
+      });
+      for (final entry in confirmadosPorRol.entries) {
+        final nuevaPlaza = plazasPorRol[entry.key] ?? 0;
+        if (nuevaPlaza < entry.value) {
+          setState(() => _errorMsg =
+              'No puedes dejar "${entry.key}" en $nuevaPlaza: ya tiene '
+              '${entry.value} confirmados. Sube las plazas o quita integrantes primero.');
+          return;
+        }
+      }
+    }
+
     setState(() { _guardando = true; _errorMsg = null; });
 
     try {
