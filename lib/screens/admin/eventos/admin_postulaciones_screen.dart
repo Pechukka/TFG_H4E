@@ -5,6 +5,7 @@ import '../../../models/postulacion.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/postulaciones_service.dart';
 import '../../../utils/top_snackbar.dart';
+import '../../chat/chat_evento_screen.dart';
 
 // Pantalla admin: postulaciones de un evento. Muestra la cobertura por rol en vivo
 // y los pendientes agrupados por rol, con Confirmar / Descartar.
@@ -108,10 +109,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                       confirmadosPorRol[rol] = (confirmadosPorRol[rol] ?? 0) + 1;
                     });
 
+                    final estadoEv = data['estado'] as String? ?? '';
+
                     return SingleChildScrollView(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildAccesoChat(estadoEv),
+                          const SizedBox(height: 20),
                           _Cobertura(
                               plazas: plazas, confirmados: confirmadosPorRol),
                           const SizedBox(height: 24),
@@ -145,6 +150,52 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Acceso al chat del evento desde el panel admin, con el mismo gateo de 3 estados:
+  //  activo      → chat abierto y escribible
+  //  finalizado  → chat en solo lectura (histórico)
+  //  resto       → cerrado, botón deshabilitado con aviso
+  Widget _buildAccesoChat(String estado) {
+    final abierto = estado == 'activo' || estado == 'finalizado';
+    final soloLectura = estado == 'finalizado';
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: abierto
+            ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatEventoScreen(
+                      tituloEvento: widget.tituloEvento,
+                      eventoId: widget.eventoId,
+                      soloLectura: soloLectura,
+                    ),
+                  ),
+                )
+            : () => showTopSnackBar(context, 'El grupo aún no está creado',
+                backgroundColor: AppTheme.amarilloAdvertencia,
+                icon: Icons.info_outline),
+        icon: Icon(
+          abierto
+              ? (soloLectura ? Icons.history : Icons.chat_bubble_outline)
+              : Icons.lock_outline,
+          size: 18,
+        ),
+        label: Text(abierto
+            ? (soloLectura ? 'Ver histórico del chat' : 'Abrir chat del grupo')
+            : 'Chat no disponible (grupo no creado)'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor:
+              abierto ? AppTheme.verdeNeon : AppTheme.textoTerciario,
+          side: BorderSide(
+              color: abierto ? AppTheme.verdeNeon : AppTheme.bordeCampo),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );
