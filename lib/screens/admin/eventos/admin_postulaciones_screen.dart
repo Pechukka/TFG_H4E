@@ -280,36 +280,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
     final c = confirmadosPorRol[p.rol] ?? 0;
     final plaza = plazas[p.rol] ?? 0;
 
-    // Si el rol ya está lleno, avisar pero dejar decidir al admin.
-    if (plaza > 0 && c >= plaza) {
-      final seguir = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.fondoCard,
-          title: const Text('Rol completo',
-              style: TextStyle(color: AppTheme.textoBlanco)),
-          content: Text(
-            'El rol ${p.rol} ya está completo ($c/$plaza). '
-            '¿Confirmar a esta persona de todos modos?',
-            style: const TextStyle(color: AppTheme.textoSecundario),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppTheme.textoSecundario)),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppTheme.verdeNeon),
-              child: const Text('Confirmar igual',
-                  style: TextStyle(color: Colors.black)),
-            ),
-          ],
-        ),
-      );
-      if (seguir != true) return;
+    // CUPO DURO (Fase 5): no se puede confirmar a un rol lleno. Para meter uno más,
+    // hay que editar el evento y subir las plazas de ese rol.
+    if (c >= plaza) {
+      showTopSnackBar(
+          context, 'Rol completo; edita el evento para añadir plazas',
+          backgroundColor: AppTheme.amarilloAdvertencia,
+          icon: Icons.info_outline);
+      return;
     }
 
     final info = _workers[p.trabajadorId];
@@ -326,6 +304,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         showTopSnackBar(context, 'Trabajador confirmado',
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
+      }
+    } on RolCompletoException {
+      // Salvaguarda ante carreras: el rol se llenó entre la comprobación y el commit.
+      if (mounted) {
+        showTopSnackBar(
+            context, 'Rol completo; edita el evento para añadir plazas',
+            backgroundColor: AppTheme.amarilloAdvertencia,
+            icon: Icons.info_outline);
       }
     } catch (_) {
       if (mounted) {
