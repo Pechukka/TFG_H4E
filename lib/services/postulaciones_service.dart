@@ -113,7 +113,11 @@ class PostulacionesService {
 
   // Fase 5C: el admin añade a un worker directamente al evento (estilo grupo de
   // WhatsApp), respetando el cupo. NO crea postulación. Lanza RolCompletoException si
-  // el rol ya está lleno. No auto-activa: el admin activa el grupo cuando quiere.
+  // el rol ya está lleno.
+  //
+  // Igual que confirmar(): si al añadir el equipo queda completo y el evento estaba
+  // 'publicado', auto-activa en la misma escritura (el disparador es "el equipo se
+  // completó", no la vía por la que se completó).
   static Future<void> anadirIntegrante({
     required String eventoId,
     required String trabajadorId,
@@ -128,21 +132,36 @@ class PostulacionesService {
         .map((k, v) => MapEntry(k, (v as num).toInt()));
     final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
     final creadoPor = data['creadoPor'] as String?;
+    final estadoActual = data['estado'] as String? ?? '';
 
     if (roles.containsKey(trabajadorId)) return; // ya es miembro: nada que hacer
 
-    final confirmadosDelRol = roles.entries
-        .where((e) => e.key != creadoPor && e.value == rol)
-        .length;
-    if (confirmadosDelRol >= (plazas[rol] ?? 0)) {
+    // Confirmados por rol actuales (sin el admin creador).
+    final confirmadosPorRol = <String, int>{};
+    roles.forEach((uid, r) {
+      if (uid == creadoPor) return;
+      confirmadosPorRol[r] = (confirmadosPorRol[r] ?? 0) + 1;
+    });
+
+    // CUPO DURO.
+    if ((confirmadosPorRol[rol] ?? 0) >= (plazas[rol] ?? 0)) {
       throw RolCompletoException(rol);
     }
 
-    await eventoRef.update({
+    // Cobertura tras añadir a este worker: ¿queda el equipo completo?
+    confirmadosPorRol[rol] = (confirmadosPorRol[rol] ?? 0) + 1;
+    final completo = plazas.isNotEmpty &&
+        plazas.entries.every((e) => (confirmadosPorRol[e.key] ?? 0) >= e.value);
+
+    final updates = <String, dynamic>{
       'trabajadoresIds': FieldValue.arrayUnion([trabajadorId]),
       'trabajadoresRoles.$trabajadorId': rol,
       'trabajadoresInfo.$trabajadorId': {'nombre': nombre, 'rol': rol},
-    });
+    };
+    if (completo && estadoActual == 'publicado') {
+      updates['estado'] = 'activo';
+    }
+    await eventoRef.update(updates);
   }
 
   // Fase 5C: el admin quita a un integrante del evento. Lo saca de
