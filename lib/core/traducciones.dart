@@ -178,6 +178,8 @@ class Traducciones {
       'ultima_nomina': 'Última nómina',
       // Detalle evento
       'ir_chat': 'CHAT',
+      'grupo_no_creado': 'GRUPO NO CREADO',
+      'grupo_aviso': 'El grupo aún no está creado',
       // Perfil nominas
       'ver_mis_nominas': 'Ver mis nóminas',
       // Modal idioma
@@ -414,6 +416,8 @@ class Traducciones {
       'ultima_nomina': 'Latest payslip',
       // Detalle evento
       'ir_chat': 'CHAT',
+      'grupo_no_creado': 'GROUP NOT CREATED',
+      'grupo_aviso': 'The group has not been created yet',
       // Perfil nominas
       'ver_mis_nominas': 'View my payslips',
       // Modal idioma

@@ -13,6 +13,7 @@ import '../eventos/detalle_evento_screen.dart';
 import '../chat/chat_evento_screen.dart';
 import '../nominas/nominas_screen.dart';
 import '../perfil/perfil_screen.dart';
+import '../../utils/top_snackbar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -73,16 +74,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case TipoNotificacion.nuevoMensaje:
         final eventoId = notif.datos?['eventoId'];
         final tituloEvento = notif.datos?['tituloEvento'] ?? 'Evento';
-        if (eventoId != null && mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatEventoScreen(
-                tituloEvento: tituloEvento,
-                eventoId: eventoId,
+        if (eventoId != null) {
+          // El chat solo se abre si el grupo está creado (estado == 'activo').
+          final evento =
+              await context.read<EventosProvider>().fetchEvento(eventoId);
+          if (!mounted) break;
+          if (evento != null && evento.estado == 'activo') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatEventoScreen(
+                  tituloEvento: tituloEvento,
+                  eventoId: eventoId,
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            showTopSnackBar(
+              context,
+              context.read<IdiomaProvider>().tr('grupo_aviso'),
+              backgroundColor: AppTheme.amarilloAdvertencia,
+              icon: Icons.info_outline,
+            );
+          }
         }
         break;
 
