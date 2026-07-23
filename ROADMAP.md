@@ -137,31 +137,108 @@ y eso es correcto: nadie debe verlos en el feed.
 
 ---
 
-## Fase 3 — Funcionalidades nuevas (valor para la demo) `feat`
+## Fase 3 — Funcionalidades nuevas (valor para la demo) `feat` ✅ (parcial)
 💡 Ideas mías que hacen la app más creíble como producto. Cada una es un commit propio;
 si alguna no la quieres, la saltamos.
 
-- [ ] **Estados de evento**: `borrador → publicado → en curso → finalizado`. Solo los
-      `publicados` entran en el feed de cartas del worker. Ordena el dashboard y el feed.
-- [ ] **Notificaciones push** en los momentos clave: nuevo evento publicado que te encaja,
-      te confirman en un evento (si va con confirmación), cambia la hora, nómina disponible.
-      Solo móvil (web ya sabemos que no).
-- [ ] **Deshacer / mis eventos aceptados**: que el worker pueda ver los eventos que ha
-      aceptado y, si hace falta, retirarse antes de una fecha límite (libera plaza, avisa admin).
-- [ ] **Resumen/exportación de nóminas del mes** para el admin en un único PDF o carpeta.
-- [ ] Commits: uno por funcionalidad (`feat: estados de evento`, `feat: confirmacion worker`…).
+- [x] **Estados de evento**: `borrador → publicado → finalizado` (el ciclo se amplía con
+      `activo` en la Fase 5). Solo los `publicados` entran en el feed. Control de estado en
+      la tarjeta del admin, filtro por estado y blindaje en reglas (solo postularse a
+      `publicado`). → rama `fase-3-estados-evento`.
+- [x] **Notificaciones push** al confirmar a un worker: aviso "Te han confirmado" en el mismo
+      batch + campanita in-app. La Cloud Function `onNotificacionCreada` lo convierte en push.
+      → rama `fase-3-notificaciones`.
+- [ ] **Deshacer / mis eventos aceptados**: que el worker pueda retirarse antes de una fecha
+      límite. — *no implementado (aparcado).*
+- [ ] **Resumen/exportación de nóminas del mes** para el admin en un único PDF. — *no
+      implementado (aparcado).*
 
 ---
 
-## Fase 4 — Pulido final y material de presentación `chore`
+## Fase 4 — Pulido final y material de presentación `chore` (en curso)
 Para que la reunión con H4E entre por los ojos.
 
-- [ ] 💡 **Datos de ejemplo (seed)**: script o botón oculto de admin que crea trabajadores,
-      eventos y disponibilidades de mentira para hacer la demo con la app "llena", no vacía.
+- [x] 💡 **Datos de ejemplo (seed)**: `scripts/seed-demo.js` (Node + firebase-admin) crea
+      workers (3 con login real + 12 de relleno), eventos en los tres estados con fechas
+      repartidas, postulaciones (pendientes/confirmadas) y notificaciones. Idempotente, con
+      flag de borrado/reseed. → rama `fase-4-seed-demo`.
 - [ ] Repaso visual final worker + admin; estados vacíos y de carga coherentes.
 - [ ] `flutter analyze` totalmente limpio; probar los flujos principales a mano.
 - [ ] 💡 Capturas / mini-guion de demo (qué enseñar y en qué orden) en un `DEMO.md`.
-- [ ] Commit: `chore: seed de demo, pulido final y guion` → push.
+
+---
+
+## Fase 5 — Ciclo de vida del evento y gestión del equipo `feat` — spec cerrada
+🎯 Trabajo nuevo (no estaba planificado). Implementar por bloques (5A–5D), un commit por
+bloque, parándose tras cada uno para revisión. **No improvisar el modelo de datos.**
+
+### Contexto (estado actual, verificado)
+- `estado` de evento hoy: `borrador | publicado | finalizado`. No existe "activo".
+- El chat NO está gateado: cualquier confirmado puede abrirlo desde que se le confirma.
+- `confirmar()` NO comprueba el cupo del rol (deja meter de más).
+- Editar un evento SÍ modifica `plazasPorRol` (ya funciona).
+
+### Decisiones tomadas (no reabrir)
+1. Nuevo ciclo: `borrador → publicado → activo → finalizado`. **`activo` = grupo creado = chat abierto.**
+2. Se llega a `activo` de dos formas: **auto** (al confirmarse la última plaza, equipo completo)
+   o **manual** (el admin pulsa "crear grupo" aunque falten plazas).
+3. **El chat solo está disponible si `estado == 'activo'`** (gateado en la app).
+4. **Límite de cupo duro:** no se puede confirmar/añadir a un rol lleno; para meter uno más
+   hay que editar el evento y subir las plazas de ese rol.
+5. Quitar a un confirmado → su postulación pasa a `descartado` y su plaza queda libre.
+6. Añadir desde el panel admin puede ser cualquier worker (estilo grupo de WhatsApp).
+7. Al editar, no se permite bajar las plazas de un rol por debajo de los confirmados que ya tiene.
+
+### Reglas de seguridad
+Con `activo`, las reglas existentes ya se comportan bien y **no hace falta tocarlas**:
+- `eventos.read` (admin | uid in trabajadoresIds | estado=='publicado'): un evento `activo` lo
+  leen sus miembros (por `trabajadoresIds`) y desaparece del feed (deja de ser `publicado`).
+- `postulaciones.create` exige `eventoPublicado`: en un evento `activo` ya no se puede postular
+  por el feed (correcto; el admin añade a mano).
+El gateo del chat por `activo` se hace **en la app** (UI), no en reglas (evitar un `get()` por
+mensaje). No cambiar reglas salvo que algo lo exija; si lo exige, avisar antes.
+
+### 5A — Visibilidad de cobertura (empezar por aquí, bajo riesgo)
+- [ ] En la lista/tarjeta de eventos del admin, mostrar por evento **confirmados** (ya existe,
+      en verde) **y postulaciones pendientes** (número, ámbar), sin entrar a "postulaciones".
+- [ ] Opcional: desglose de cobertura por rol si cabe sin recargar la tarjeta.
+- [ ] Commit: `feat(admin): mostrar postulaciones pendientes en la lista de eventos`.
+
+### 5B — Ciclo de vida y activación del grupo (el núcleo)
+- [ ] Añadir el estado `activo` al modelo/flujo (`borrador | publicado | activo | finalizado`).
+- [ ] **Auto-activación:** en `confirmar()`, tras añadir al worker, si todos los roles quedan
+      cubiertos (confirmados por rol == `plazasPorRol`, excluyendo al admin), poner
+      `estado = 'activo'` en el mismo batch.
+- [ ] **Activación manual:** botón "Crear grupo / Activar" en eventos `publicado`, aunque falten
+      plazas (avisa de la cobertura pero deja activar).
+- [ ] **Límite de cupo en `confirmar()`:** si el rol ya está lleno, NO confirmar; avisar. Cambia
+      el comportamiento actual (hoy no comprueba).
+- [ ] **Gateo del chat:** el chat solo se abre si `estado == 'activo'`; si no, ocultar/deshabilitar
+      el acceso con un aviso ("El grupo aún no está creado").
+- [ ] Commit(s): `feat: ciclo de vida del evento (estado activo, auto/manual, cupo, chat gateado)`.
+
+### 5C — Gestión del equipo (añadir / quitar integrantes)
+- [ ] **Añadir integrante** (respetando cupo): elegir worker + rol con plaza libre; bloquear si
+      el rol está lleno. Escribe en `trabajadoresIds/Roles/Info` (sin teléfono).
+- [ ] **Quitar integrante:** lo saca de `trabajadoresIds/Roles/Info` y su postulación (si existe)
+      pasa a `descartado`. Libera la plaza. No permitir quitar al admin creador.
+- [ ] **Guarda en edición:** al editar `plazasPorRol`, impedir bajar un rol por debajo de sus
+      confirmados actuales. Subir siempre permitido.
+- [ ] Recalcular cobertura tras añadir/quitar; al quitar, el evento puede seguir `activo` (no se
+      desactiva solo).
+- [ ] Commit: `feat(admin): añadir y quitar integrantes del evento respetando cupo`.
+
+### 5D — Chat de eventos en el panel admin
+- [ ] Surtir el chat del evento en el **panel web admin** (hoy solo desde el móvil worker). Las
+      reglas ya permiten al admin (es miembro como Coordinador): es sobre todo UI.
+- [ ] La zona de "participantes" del chat admin es donde pueden vivir las acciones de 5C.
+- [ ] Commit: `feat(admin): ver y participar en el chat del evento desde el panel web`.
+
+> `flutter analyze` limpio antes de cada commit. Rama `fase-5-ciclo-evento`. Parar tras cada
+> bloque para revisión; no mergear sin OK.
+> Nota demo: los eventos del seed ya `publicado` y completos no se vuelven `activo` solos (la
+> auto-activación salta al confirmar, no retroactivamente). Si se quiere alguno `activo`,
+> activarlo a mano o re-sembrar con ese estado.
 
 ---
 
