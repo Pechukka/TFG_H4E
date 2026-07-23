@@ -69,35 +69,46 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
           _buildFiltros(),
           const SizedBox(height: 16),
           Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: AdminService.todosLosEventosStream(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppTheme.verdeNeon),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Error al cargar eventos',
-                        style: TextStyle(color: AppTheme.textoSecundario)),
-                  );
-                }
+            // Stream externo: nº de postulaciones pendientes por evento (5A).
+            child: StreamBuilder<Map<String, int>>(
+              stream: AdminService.postulacionesPendientesPorEventoStream(),
+              builder: (context, pendientesSnap) {
+                final pendientesPorEvento = pendientesSnap.data ?? {};
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: AdminService.todosLosEventosStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                            color: AppTheme.verdeNeon),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Text('Error al cargar eventos',
+                            style: TextStyle(color: AppTheme.textoSecundario)),
+                      );
+                    }
 
-                final docs = snapshot.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return _buildSinEventos();
-                }
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return _buildSinEventos();
+                    }
 
-                final filtrados = _aplicarFiltros(docs);
-                if (filtrados.isEmpty) {
-                  return _buildSinResultados();
-                }
+                    final filtrados = _aplicarFiltros(docs);
+                    if (filtrados.isEmpty) {
+                      return _buildSinResultados();
+                    }
 
-                return ListView.separated(
-                  itemCount: filtrados.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) => _buildCardEvento(filtrados[i]),
+                    return ListView.separated(
+                      itemCount: filtrados.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) => _buildCardEvento(
+                        filtrados[i],
+                        pendientesPorEvento[filtrados[i].id] ?? 0,
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -248,7 +259,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     );
   }
 
-  Widget _buildCardEvento(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  Widget _buildCardEvento(
+      QueryDocumentSnapshot<Map<String, dynamic>> doc, int pendientes) {
     final data = doc.data();
     final titulo = data['titulo'] ?? 'Sin título';
     final ubicacion = data['ubicacion'] ?? '';
@@ -364,6 +376,29 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                       color: AppTheme.textoTerciario, fontSize: 10)),
             ],
           ),
+          // Postulaciones pendientes (ámbar), solo si hay cola
+          if (pendientes > 0) ...[
+            const SizedBox(width: 12),
+            Tooltip(
+              message: 'Postulaciones pendientes de revisar',
+              child: Column(
+                children: [
+                  Text(
+                    '$pendientes',
+                    style: const TextStyle(
+                        color: AppTheme.amarilloAdvertencia,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18),
+                  ),
+                  Text(
+                    pendientes == 1 ? 'pendiente' : 'pendientes',
+                    style: const TextStyle(
+                        color: AppTheme.amarilloAdvertencia, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           // Botón ver postulaciones
           IconButton(
