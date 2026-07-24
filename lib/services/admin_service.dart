@@ -466,8 +466,13 @@ class AdminService {
     required String estado, // 'borrador' | 'publicado' | 'finalizado'
     required String adminUid,
     required String adminNombre,
+    required String adminTelefono,
   }) async {
-    await _firestore.collection('eventos').add({
+    // Id generado a mano para poder escribir evento + subcolección equipo en un batch.
+    final ref = _firestore.collection('eventos').doc();
+    final batch = _firestore.batch();
+
+    batch.set(ref, {
       'titulo': titulo,
       'descripcion': descripcion,
       'ubicacion': ubicacion,
@@ -491,6 +496,15 @@ class AdminService {
       'cobroPorHora': 0.0,
       'creadoPor': adminUid,
     });
+
+    // Subcolección equipo: aquí SÍ va el teléfono (solo la leen los miembros).
+    batch.set(ref.collection(AppConstants.subColEquipo).doc(adminUid), {
+      'nombre': adminNombre,
+      'rol': 'Coordinador',
+      'telefono': adminTelefono,
+    });
+
+    await batch.commit();
   }
 
   // ─── FASE 1: Datos del dashboard admin ──────────────────────────────────────

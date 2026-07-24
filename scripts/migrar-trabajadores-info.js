@@ -1,12 +1,17 @@
 // Script de migración ONE-OFF (se ejecuta una sola vez, a mano).
 //
-// Rellena el campo `trabajadoresInfo` en los eventos ANTIGUOS que no lo tienen,
-// para que la app worker pueda mostrar el equipo sin leer la colección `users`
-// (las reglas por rol se lo prohíben). Copia nombre, teléfono y rol de cada
-// asignado dentro del propio doc del evento, y marca al admin con esAdmin: true.
+// Hace dos cosas para que la app worker pueda mostrar el equipo sin leer `users`
+// (las reglas por rol se lo prohíben):
 //
-// Es IDEMPOTENTE: los eventos que ya tienen trabajadoresInfo se saltan.
-// Puedes ejecutarlo varias veces sin miedo.
+//   1. `trabajadoresInfo` en el doc del evento: {uid: {nombre, rol, esAdmin}}, SIN
+//      teléfono (ese doc lo lee cualquier worker si el evento está publicado).
+//      Solo se escribe en los eventos que aún no lo tienen.
+//   2. Subcolección `eventos/{id}/equipo/{uid}`: {nombre, rol, telefono}. Aquí SÍ va
+//      el teléfono, porque esa subcolección solo la pueden leer los miembros del
+//      evento. Se rellena SIEMPRE, también en eventos ya migrados.
+//
+// Es IDEMPOTENTE: todo se escribe con set()/ids fijos, así que puedes ejecutarlo
+// varias veces sin miedo.
 //
 // Cómo ejecutarlo:
 //   1. cd scripts
@@ -39,14 +44,6 @@ async function migrar() {
     const data = eventoDoc.data();
     const titulo = data.titulo || '(sin título)';
 
-    // Idempotencia: si ya tiene trabajadoresInfo con contenido, no tocar.
-    const infoActual = data.trabajadoresInfo;
-    if (infoActual && Object.keys(infoActual).length > 0) {
-      console.log(`= Ya migrado: "${titulo}" (${eventoDoc.id})`);
-      yaEstaban++;
-      continue;
-    }
-
     const ids = Array.isArray(data.trabajadoresIds) ? data.trabajadoresIds : [];
     const roles = data.trabajadoresRoles || {};
 
@@ -56,8 +53,13 @@ async function migrar() {
       continue;
     }
 
-    // Construimos trabajadoresInfo leyendo cada user (aquí sí podemos: admin).
+    // ¿Le falta trabajadoresInfo? (la subcolección equipo se rellena siempre)
+    const infoActual = data.trabajadoresInfo;
+    const necesitaInfo = !(infoActual && Object.keys(infoActual).length > 0);
+
     const trabajadoresInfo = {};
+    let fichasEquipo = 0;
+
     for (const uid of ids) {
       const userDoc = await db.collection('users').doc(uid).get();
       if (!userDoc.exists) {
@@ -66,19 +68,39 @@ async function migrar() {
       }
       const u = userDoc.data();
       const nombre = `${u.nombre || ''} ${u.apellidos || ''}`.trim();
-      // NO se guarda telefono: un evento publicado es legible por cualquier worker.
+      const rol = roles[uid] || '';
+
+      // En el doc del evento NO va telefono: lo lee cualquier worker si está publicado.
       trabajadoresInfo[uid] = {
         nombre: nombre,
-        rol: roles[uid] || '',
+        rol: rol,
         // El admin conserva su rol (Coordinador) en trabajadoresRoles, pero aquí
         // lo marcamos para que la pantalla de equipo lo pinte como "Admin".
         esAdmin: (u.rol === 'admin'),
       };
+
+      // Subcolección eventos/{id}/equipo/{uid}: aquí SÍ va el teléfono, porque solo
+      // la pueden leer los miembros del evento. Idempotente (doc id = uid).
+      await eventoDoc.ref.collection('equipo').doc(uid).set({
+        nombre: nombre,
+        rol: rol,
+        telefono: u.telefono || '',
+      });
+      fichasEquipo++;
     }
 
-    await eventoDoc.ref.update({ trabajadoresInfo: trabajadoresInfo });
-    console.log(`+ Migrado: "${titulo}" (${eventoDoc.id}) — ${Object.keys(trabajadoresInfo).length} miembros`);
-    migrados++;
+    if (necesitaInfo) {
+      await eventoDoc.ref.update({ trabajadoresInfo: trabajadoresInfo });
+      console.log(
+        `+ Migrado: "${titulo}" (${eventoDoc.id}) — trabajadoresInfo + ${fichasEquipo} fichas de equipo`,
+      );
+      migrados++;
+    } else {
+      console.log(
+        `= Ya tenía trabajadoresInfo: "${titulo}" (${eventoDoc.id}) — ${fichasEquipo} fichas de equipo al día`,
+      );
+      yaEstaban++;
+    }
   }
 
   console.log('\n──────── Resumen ────────');

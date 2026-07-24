@@ -113,6 +113,24 @@ class EventosService {
     return evento?.trabajadoresIds.contains(trabajadorId) ?? false;
   }
 
+  // Teléfonos del equipo desde la subcolección eventos/{id}/equipo.
+  // Si no hay permiso o el evento aún no está migrado, se devuelve vacío y el equipo
+  // simplemente se muestra sin teléfono (no rompe la pantalla).
+  Future<Map<String, String>> _telefonosEquipo(String eventoId) async {
+    try {
+      final snap = await _firestore
+          .collection(AppConstants.colEventos)
+          .doc(eventoId)
+          .collection(AppConstants.subColEquipo)
+          .get();
+      return {
+        for (final d in snap.docs) d.id: (d.data()['telefono'] as String?) ?? '',
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getEquipoEvento(String eventoId) async {
     final evento = await getEvento(eventoId);
     if (evento == null) return [];
@@ -121,6 +139,9 @@ class EventosService {
     // así el worker no necesita leer los docs de users (su regla se lo prohíbe).
     // El flag esAdmin lo pinta la pantalla como "Admin"; 'rol' es el rol real.
     if (evento.trabajadoresInfo.isNotEmpty) {
+      // El teléfono NO está en trabajadoresInfo (se filtraría en el feed): vive en la
+      // subcolección eventos/{id}/equipo, que solo pueden leer los miembros del evento.
+      final telefonos = await _telefonosEquipo(eventoId);
       final equipo = <Map<String, dynamic>>[];
       for (var trabajadorId in evento.trabajadoresIds) {
         final info = evento.trabajadoresInfo[trabajadorId];
@@ -130,6 +151,7 @@ class EventosService {
           'nombre': info['nombre'] ?? '',
           'rol': info['rol'] ?? '',
           'esAdmin': info['esAdmin'] == true,
+          'telefono': telefonos[trabajadorId] ?? '',
         });
       }
       return equipo;
@@ -157,6 +179,7 @@ class EventosService {
             'nombre': data['nombre'] ?? '',
             'rol': evento.trabajadoresRoles[trabajadorId] ?? '',
             'esAdmin': esAdmin,
+            'telefono': data['telefono'] ?? '',
           });
         }
       } catch (_) {

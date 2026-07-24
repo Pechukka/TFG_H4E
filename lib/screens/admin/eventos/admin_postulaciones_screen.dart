@@ -39,9 +39,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
     final lista = await AdminService.getWorkers();
     if (!mounted) return;
     setState(() {
+      // El teléfono se guarda aquí (memoria del admin, que sí puede leer users) para
+      // escribirlo luego en la subcolección `equipo` del evento.
       _workers = {
         for (final w in lista)
-          (w['uid'] as String): {'nombre': w['nombre'] ?? ''}
+          (w['uid'] as String): {
+            'nombre': w['nombre'] ?? '',
+            'telefono': w['telefono'] ?? '',
+          }
       };
       _cargandoWorkers = false;
     });
@@ -465,12 +470,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
 
     if (confirmar != true || uidSel == null) return;
     final nombre = (_workers[uidSel]?['nombre'] as String?) ?? '';
+    final telefono = (_workers[uidSel]?['telefono'] as String?) ?? '';
     try {
       await PostulacionesService.anadirIntegrante(
         eventoId: widget.eventoId,
         trabajadorId: uidSel!,
         rol: rolSel,
         nombre: nombre,
+        telefono: telefono,
       );
       if (mounted) {
         showTopSnackBar(context, 'Integrante añadido',
@@ -603,6 +610,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         trabajadorId: p.trabajadorId,
         rol: p.rol,
         nombre: (info?['nombre'] as String?) ?? '',
+        telefono: (info?['telefono'] as String?) ?? '',
         tituloEvento: widget.tituloEvento,
       );
       if (mounted) {

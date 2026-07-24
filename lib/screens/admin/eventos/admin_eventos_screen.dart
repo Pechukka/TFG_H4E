@@ -921,6 +921,9 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     try {
       final adminUid = context.read<AuthProvider>().currentUserId ?? '';
       final adminNombre = context.read<AuthProvider>().currentUser?.nombre ?? '';
+      // El teléfono va a la subcolección `equipo` (no a trabajadoresInfo).
+      final adminTelefono =
+          context.read<AuthProvider>().currentUser?.telefono ?? '';
 
       if (_esEdicion) {
         final titulo = _tituloCtrl.text.trim();
@@ -955,6 +958,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
           estado: _estado,
           adminUid: adminUid,
           adminNombre: adminNombre,
+          adminTelefono: adminTelefono,
         );
       }
 
