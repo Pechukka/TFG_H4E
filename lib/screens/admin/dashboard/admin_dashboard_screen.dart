@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../../core/constants.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 
 // Pantalla de inicio del panel admin: KPIs de un vistazo + próximos eventos.
@@ -26,6 +28,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: FutureBuilder<Map<String, dynamic>>(
@@ -37,7 +40,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             );
           }
           if (snapshot.hasError || !snapshot.hasData) {
-            return _buildError();
+            return _buildError(t);
           }
 
           final d = snapshot.data!;
@@ -51,14 +54,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 Row(
                   children: [
-                    Text('Resumen',
+                    Text(t.tr('admin_resumen'),
                         style: Theme.of(context).textTheme.headlineSmall),
                     const Spacer(),
                     IconButton(
                       onPressed: _recargar,
                       icon: const Icon(Icons.refresh,
                           color: AppTheme.textoSecundario, size: 20),
-                      tooltip: 'Actualizar',
+                      tooltip: t.tr('admin_actualizar'),
                     ),
                   ],
                 ),
@@ -72,30 +75,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       icon: Icons.people_outline,
                       color: AppTheme.verdeNeon,
                       valor: '${d['trabajadoresActivos'] ?? 0}',
-                      etiqueta: 'Trabajadores activos',
+                      etiqueta: t.tr('admin_kpi_trabajadores'),
                     ),
                     _KpiCard(
                       icon: Icons.event_outlined,
                       color: AppTheme.azulInfo,
                       valor: '${d['eventosProximos'] ?? 0}',
-                      etiqueta: 'Eventos próximos (7 días)',
+                      etiqueta: t.tr('admin_kpi_eventos'),
                     ),
                     _KpiCard(
                       icon: Icons.schedule,
                       color: AppTheme.verdeNeonHover,
                       valor: '${horas.toStringAsFixed(1)} h',
-                      etiqueta: 'Horas fichadas este mes',
+                      etiqueta: t.tr('admin_kpi_horas'),
                     ),
                     _KpiCard(
                       icon: Icons.receipt_long_outlined,
                       color: AppTheme.amarilloAdvertencia,
                       valor: '${d['nominasPendientes'] ?? 0}',
-                      etiqueta: 'Nóminas pendientes de enviar',
+                      etiqueta: t.tr('admin_kpi_nominas'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 28),
-                Text('Próximos eventos',
+                Text(t.tr('admin_proximos_eventos'),
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 12),
                 _ProximosEventos(eventos: proximos),
@@ -107,7 +110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError(IdiomaProvider t) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -115,14 +118,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const Icon(Icons.error_outline,
               color: AppTheme.textoSecundario, size: 40),
           const SizedBox(height: 12),
-          const Text('No se pudieron cargar los datos',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          Text(t.tr('admin_error_datos'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: _recargar,
             icon: const Icon(Icons.refresh, color: AppTheme.verdeNeon),
-            label: const Text('Reintentar',
-                style: TextStyle(color: AppTheme.verdeNeon)),
+            label: Text(t.tr('admin_reintentar'),
+                style: const TextStyle(color: AppTheme.verdeNeon)),
           ),
         ],
       ),
@@ -200,6 +203,7 @@ class _ProximosEventos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     if (eventos.isEmpty) {
       return Container(
         width: double.infinity,
@@ -209,13 +213,13 @@ class _ProximosEventos extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.bordeCard),
         ),
-        child: const Column(
+        child: Column(
           children: [
-            Icon(Icons.event_available_outlined,
+            const Icon(Icons.event_available_outlined,
                 color: AppTheme.textoTerciario, size: 36),
-            SizedBox(height: 10),
-            Text('No hay eventos próximos',
-                style: TextStyle(color: AppTheme.textoSecundario)),
+            const SizedBox(height: 10),
+            Text(t.tr('admin_sin_proximos'),
+                style: const TextStyle(color: AppTheme.textoSecundario)),
           ],
         ),
       );
@@ -303,9 +307,9 @@ class _ProximosEventos extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       fontSize: 15)),
               const SizedBox(width: 4),
-              const Text('asignados',
-                  style:
-                      TextStyle(color: AppTheme.textoTerciario, fontSize: 11)),
+              Text(context.watch<IdiomaProvider>().tr('admin_asignados'),
+                  style: const TextStyle(
+                      color: AppTheme.textoTerciario, fontSize: 11)),
             ],
           ),
         ],

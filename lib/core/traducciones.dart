@@ -246,6 +246,18 @@ class Traducciones {
       'admin_eventos': 'Eventos',
       'admin_nominas': 'Nóminas',
       'admin_logout_msg': '¿Seguro que quieres cerrar sesión?',
+      // ── Panel admin: dashboard ──
+      'admin_resumen': 'Resumen',
+      'admin_actualizar': 'Actualizar',
+      'admin_kpi_trabajadores': 'Trabajadores activos',
+      'admin_kpi_eventos': 'Eventos próximos (7 días)',
+      'admin_kpi_horas': 'Horas fichadas este mes',
+      'admin_kpi_nominas': 'Nóminas pendientes de enviar',
+      'admin_proximos_eventos': 'Próximos eventos',
+      'admin_sin_proximos': 'No hay eventos próximos',
+      'admin_error_datos': 'No se pudieron cargar los datos',
+      'admin_reintentar': 'Reintentar',
+      'admin_asignados': 'asignados',
     },
     'en': {
       'nav_escritorio': 'Dashboard',
@@ -493,6 +505,18 @@ class Traducciones {
       'admin_eventos': 'Events',
       'admin_nominas': 'Payroll',
       'admin_logout_msg': 'Are you sure you want to sign out?',
+      // ── Admin panel: dashboard ──
+      'admin_resumen': 'Summary',
+      'admin_actualizar': 'Refresh',
+      'admin_kpi_trabajadores': 'Active workers',
+      'admin_kpi_eventos': 'Upcoming events (7 days)',
+      'admin_kpi_horas': 'Hours clocked this month',
+      'admin_kpi_nominas': 'Payslips pending to send',
+      'admin_proximos_eventos': 'Upcoming events',
+      'admin_sin_proximos': 'No upcoming events',
+      'admin_error_datos': 'Could not load data',
+      'admin_reintentar': 'Retry',
+      'admin_asignados': 'assigned',
     },
   };
 
