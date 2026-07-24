@@ -26,13 +26,15 @@ class Fichaje {
     
     final fin = salida ?? DateTime.now();
     var total = fin.difference(entrada!);
-    
+
     for (var pausa in pausas) {
-      if (pausa.fin != null) {
-        total -= pausa.fin!.difference(pausa.inicio);
-      }
+      // Una pausa ABIERTA (sin fin) también se descuenta: mientras el fichaje está
+      // pausado el reloj no debe seguir sumando. Se corta en la salida si ya la hay,
+      // y si no, en el instante actual.
+      final finPausa = pausa.fin ?? (salida ?? DateTime.now());
+      total -= finPausa.difference(pausa.inicio);
     }
-    
+
     return total;
   }
 

@@ -109,9 +109,14 @@ class FichajeProvider with ChangeNotifier {
 
     try {
       await _fichajesService.pausarFichaje(_fichajeActivo!.id);
-      
-      // Actualizar estado local
-      _fichajeActivo = _fichajeActivo!.copyWith(estado: FichajeEstado.pausado);
+
+      // Recargar desde Firestore: el servicio ha añadido la pausa, y si aquí solo
+      // cambiáramos el estado, la lista de pausas local quedaría vieja y el cronómetro
+      // no descontaría nada.
+      final actualizado = await _fichajesService.getFichajeActivo(
+          _fichajeActivo!.trabajadorId, _fichajeActivo!.eventoId);
+      _fichajeActivo =
+          actualizado ?? _fichajeActivo!.copyWith(estado: FichajeEstado.pausado);
       _detenerCronometro();
       
       _setLoading(false);
@@ -132,9 +137,12 @@ class FichajeProvider with ChangeNotifier {
 
     try {
       await _fichajesService.reanudarFichaje(_fichajeActivo!.id);
-      
-      // Actualizar estado local
-      _fichajeActivo = _fichajeActivo!.copyWith(estado: FichajeEstado.enCurso);
+
+      // Recargar desde Firestore para traer la pausa ya cerrada (con su fin).
+      final actualizado = await _fichajesService.getFichajeActivo(
+          _fichajeActivo!.trabajadorId, _fichajeActivo!.eventoId);
+      _fichajeActivo =
+          actualizado ?? _fichajeActivo!.copyWith(estado: FichajeEstado.enCurso);
       _iniciarCronometro();
       
       _setLoading(false);
