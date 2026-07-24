@@ -191,7 +191,9 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
 
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
+      // OutlinedButton (no .icon) con Row propia para poder envolver el texto en
+      // Flexible + ellipsis: la etiqueta larga (sobre todo en inglés) no desborda.
+      child: OutlinedButton(
         onPressed: abierto
             ? () => Navigator.push(
                   context,
@@ -206,15 +208,6 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
             : () => showTopSnackBar(context, 'El grupo aún no está creado',
                 backgroundColor: AppTheme.amarilloAdvertencia,
                 icon: Icons.info_outline),
-        icon: Icon(
-          abierto
-              ? (soloLectura ? Icons.history : Icons.chat_bubble_outline)
-              : Icons.lock_outline,
-          size: 18,
-        ),
-        label: Text(abierto
-            ? (soloLectura ? 'Ver histórico del chat' : 'Abrir chat del grupo')
-            : 'Chat no disponible (grupo no creado)'),
         style: OutlinedButton.styleFrom(
           foregroundColor:
               abierto ? AppTheme.verdeNeon : AppTheme.textoTerciario,
@@ -222,6 +215,29 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
               color: abierto ? AppTheme.verdeNeon : AppTheme.bordeCampo),
           padding: const EdgeInsets.symmetric(vertical: 14),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              abierto
+                  ? (soloLectura ? Icons.history : Icons.chat_bubble_outline)
+                  : Icons.lock_outline,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                abierto
+                    ? (soloLectura
+                        ? 'Ver histórico del chat'
+                        : 'Abrir chat del grupo')
+                    : 'Chat no disponible (grupo no creado)',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );

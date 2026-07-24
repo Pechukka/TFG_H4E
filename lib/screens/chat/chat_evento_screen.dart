@@ -637,10 +637,14 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
             const Icon(Icons.lock_outline,
                 size: 16, color: AppTheme.textoTerciario),
             const SizedBox(width: 8),
-            Text(
-              t.tr('evento_finalizado_lectura'),
-              style: const TextStyle(
-                  color: AppTheme.textoTerciario, fontSize: 13),
+            Flexible(
+              child: Text(
+                t.tr('evento_finalizado_lectura'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: AppTheme.textoTerciario, fontSize: 13),
+              ),
             ),
           ],
         ),
