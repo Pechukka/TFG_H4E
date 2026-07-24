@@ -332,12 +332,16 @@ class _FichajeScreenState extends State<FichajeScreen> {
                           size: 20,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          _getEstadoTexto(estado, t),
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(color: _getEstadoColor(estado)),
+                        Flexible(
+                          child: Text(
+                            _getEstadoTexto(estado, t),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(color: _getEstadoColor(estado)),
+                          ),
                         ),
                       ],
                     ),
@@ -386,12 +390,14 @@ class _FichajeScreenState extends State<FichajeScreen> {
                         Icon(Icons.access_time,
                             color: AppTheme.amarilloAdvertencia, size: 18),
                         const SizedBox(width: 8),
-                        Text(
-                          mensajeBloqueo,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.amarilloAdvertencia,
-                                  ),
+                        Expanded(
+                          child: Text(
+                            mensajeBloqueo,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.amarilloAdvertencia,
+                                    ),
+                          ),
                         ),
                       ],
                     ),
@@ -447,10 +453,15 @@ class _FichajeScreenState extends State<FichajeScreen> {
                     children: [
                       const Icon(Icons.check_circle, color: AppTheme.verdeNeon),
                       const SizedBox(width: 8),
-                      Text(
-                        t.tr('fichaje_completado'),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppTheme.verdeNeon,
+                      Flexible(
+                        child: Text(
+                          t.tr('fichaje_completado'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: AppTheme.verdeNeon,
+                                  ),
                         ),
                       ),
                     ],
