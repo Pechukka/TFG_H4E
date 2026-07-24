@@ -16,11 +16,14 @@ import 'seleccionar_ubicacion_screen.dart';
 class ChatEventoScreen extends StatefulWidget {
   final String tituloEvento;
   final String eventoId;
+  // true = solo lectura (evento finalizado): se ve el histórico pero no se envía.
+  final bool soloLectura;
 
   const ChatEventoScreen({
     super.key,
     required this.tituloEvento,
     this.eventoId = '',
+    this.soloLectura = false,
   });
 
   @override
@@ -486,8 +489,10 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
           if (_replyingTo != null) _buildReplyBar(t, _replyingTo!),
           if (_editandoMensaje != null) _buildEditBar(t),
 
-          // Input
-          _buildInputBar(t, chatProvider),
+          // Input (o barra de solo lectura si el evento está finalizado)
+          widget.soloLectura
+              ? _buildBarraLectura(t)
+              : _buildInputBar(t, chatProvider),
         ],
       ),
     );
@@ -612,6 +617,33 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
             constraints: const BoxConstraints.tightFor(width: 36, height: 36),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Barra de solo lectura (evento finalizado) ───────────────────────────────
+
+  Widget _buildBarraLectura(IdiomaProvider t) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: AppTheme.fondoInput,
+        border: Border(top: BorderSide(color: AppTheme.bordeCampo, width: 1)),
+      ),
+      child: SafeArea(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline,
+                size: 16, color: AppTheme.textoTerciario),
+            const SizedBox(width: 8),
+            Text(
+              t.tr('evento_finalizado_lectura'),
+              style: const TextStyle(
+                  color: AppTheme.textoTerciario, fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }

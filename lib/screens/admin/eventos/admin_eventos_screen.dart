@@ -18,8 +18,8 @@ class AdminEventosScreen extends StatefulWidget {
   State<AdminEventosScreen> createState() => _AdminEventosScreenState();
 }
 
-// Filtro por el campo `estado` del evento (borrador | publicado | finalizado).
-enum _FiltroEstado { todos, borrador, publicado, finalizado }
+// Filtro por el campo `estado` del evento (borrador | publicado | activo | finalizado).
+enum _FiltroEstado { todos, borrador, publicado, activo, finalizado }
 
 class _AdminEventosScreenState extends State<AdminEventosScreen> {
   // Si es true, mostramos el formulario de crear evento en vez de la lista
@@ -69,35 +69,46 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
           _buildFiltros(),
           const SizedBox(height: 16),
           Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: AdminService.todosLosEventosStream(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppTheme.verdeNeon),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Error al cargar eventos',
-                        style: TextStyle(color: AppTheme.textoSecundario)),
-                  );
-                }
+            // Stream externo: nº de postulaciones pendientes por evento (5A).
+            child: StreamBuilder<Map<String, int>>(
+              stream: AdminService.postulacionesPendientesPorEventoStream(),
+              builder: (context, pendientesSnap) {
+                final pendientesPorEvento = pendientesSnap.data ?? {};
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: AdminService.todosLosEventosStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                            color: AppTheme.verdeNeon),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Text('Error al cargar eventos',
+                            style: TextStyle(color: AppTheme.textoSecundario)),
+                      );
+                    }
 
-                final docs = snapshot.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return _buildSinEventos();
-                }
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return _buildSinEventos();
+                    }
 
-                final filtrados = _aplicarFiltros(docs);
-                if (filtrados.isEmpty) {
-                  return _buildSinResultados();
-                }
+                    final filtrados = _aplicarFiltros(docs);
+                    if (filtrados.isEmpty) {
+                      return _buildSinResultados();
+                    }
 
-                return ListView.separated(
-                  itemCount: filtrados.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) => _buildCardEvento(filtrados[i]),
+                    return ListView.separated(
+                      itemCount: filtrados.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) => _buildCardEvento(
+                        filtrados[i],
+                        pendientesPorEvento[filtrados[i].id] ?? 0,
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -131,6 +142,9 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
         case _FiltroEstado.publicado:
           if (estadoVista != 'publicado') return false;
           break;
+        case _FiltroEstado.activo:
+          if (estadoVista != 'activo') return false;
+          break;
         case _FiltroEstado.finalizado:
           if (estadoVista != 'finalizado') return false;
           break;
@@ -157,6 +171,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
         _chipEstado('Borradores', _FiltroEstado.borrador),
         const SizedBox(width: 8),
         _chipEstado('Publicados', _FiltroEstado.publicado),
+        const SizedBox(width: 8),
+        _chipEstado('Activos', _FiltroEstado.activo),
         const SizedBox(width: 8),
         _chipEstado('Finalizados', _FiltroEstado.finalizado),
         const Spacer(),
@@ -248,7 +264,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     );
   }
 
-  Widget _buildCardEvento(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  Widget _buildCardEvento(
+      QueryDocumentSnapshot<Map<String, dynamic>> doc, int pendientes) {
     final data = doc.data();
     final titulo = data['titulo'] ?? 'Sin título';
     final ubicacion = data['ubicacion'] ?? '';
@@ -311,7 +328,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                           style: Theme.of(context).textTheme.titleSmall),
                     ),
                     const SizedBox(width: 8),
-                    _estadoControl(doc.id, estadoVista),
+                    _estadoControl(doc.id, estadoVista, data),
                     if (enCurso) ...[
                       const SizedBox(width: 8),
                       Container(
@@ -364,6 +381,29 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                       color: AppTheme.textoTerciario, fontSize: 10)),
             ],
           ),
+          // Postulaciones pendientes (ámbar), solo si hay cola
+          if (pendientes > 0) ...[
+            const SizedBox(width: 12),
+            Tooltip(
+              message: 'Postulaciones pendientes de revisar',
+              child: Column(
+                children: [
+                  Text(
+                    '$pendientes',
+                    style: const TextStyle(
+                        color: AppTheme.amarilloAdvertencia,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18),
+                  ),
+                  Text(
+                    pendientes == 1 ? 'pendiente' : 'pendientes',
+                    style: const TextStyle(
+                        color: AppTheme.amarilloAdvertencia, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           // Botón ver postulaciones
           IconButton(
@@ -413,25 +453,49 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
   static const Map<String, Color> _coloresEstado = {
     'borrador': AppTheme.amarilloAdvertencia,
     'publicado': AppTheme.verdeNeon,
+    'activo': AppTheme.azulInfo,
     'finalizado': AppTheme.textoTerciario,
   };
   static const Map<String, String> _labelsEstado = {
     'borrador': 'Borrador',
     'publicado': 'Publicado',
+    'activo': 'Activo',
     'finalizado': 'Finalizado',
   };
 
+  // Roles que aún no están cubiertos del todo: {rol: nº de plazas que faltan}.
+  // Excluye al admin creador (por creadoPor), igual que la cobertura del resto de la app.
+  Map<String, int> _faltantesPorRol(Map<String, dynamic> data) {
+    final plazas = (data['plazasPorRol'] as Map<String, dynamic>? ?? {})
+        .map((k, v) => MapEntry(k, (v as num).toInt()));
+    final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
+    final creadoPor = data['creadoPor'] as String?;
+    final confirmadosPorRol = <String, int>{};
+    roles.forEach((uid, rol) {
+      if (uid == creadoPor) return;
+      confirmadosPorRol[rol] = (confirmadosPorRol[rol] ?? 0) + 1;
+    });
+    final faltan = <String, int>{};
+    plazas.forEach((rol, plaza) {
+      final c = confirmadosPorRol[rol] ?? 0;
+      if (plaza - c > 0) faltan[rol] = plaza - c;
+    });
+    return faltan;
+  }
+
   // Control para cambiar el estado del evento (borrador → publicado → finalizado).
   // Muestra el estado actual como chip y abre un menú con los tres estados.
-  Widget _estadoControl(String eventoId, String estadoActual) {
+  Widget _estadoControl(
+      String eventoId, String estadoActual, Map<String, dynamic> data) {
     final color = _coloresEstado[estadoActual] ?? AppTheme.verdeNeon;
     final label = _labelsEstado[estadoActual] ?? 'Publicado';
 
     return PopupMenuButton<String>(
       tooltip: 'Cambiar estado',
       color: AppTheme.fondoCard,
-      onSelected: (nuevo) => _cambiarEstado(eventoId, nuevo, estadoActual),
-      itemBuilder: (_) => ['borrador', 'publicado', 'finalizado'].map((e) {
+      onSelected: (nuevo) => _cambiarEstado(eventoId, nuevo, estadoActual, data),
+      itemBuilder: (_) =>
+          ['borrador', 'publicado', 'activo', 'finalizado'].map((e) {
         final c = _coloresEstado[e]!;
         final activo = e == estadoActual;
         return PopupMenuItem<String>(
@@ -474,14 +538,55 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     );
   }
 
-  Future<void> _cambiarEstado(
-      String eventoId, String nuevo, String actual) async {
+  Future<void> _cambiarEstado(String eventoId, String nuevo, String actual,
+      Map<String, dynamic> data) async {
     if (nuevo == actual) return;
+
+    // Activación manual ("Crear grupo"): avisa de la cobertura pero deja activar
+    // aunque falten plazas. El admin decide.
+    if (nuevo == 'activo') {
+      final faltan = _faltantesPorRol(data);
+      final contenido = faltan.isEmpty
+          ? 'El equipo está completo. Se creará el grupo y el evento pasará a activo '
+              '(sale del feed y se abre el chat).'
+          : 'Aún faltan plazas por cubrir:\n\n'
+              '${faltan.entries.map((e) => '· ${e.key}: faltan ${e.value}').join('\n')}'
+              '\n\n¿Crear el grupo igualmente? El evento saldrá del feed.';
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.fondoCard,
+          title: const Text('Crear grupo',
+              style: TextStyle(color: AppTheme.textoBlanco)),
+          content: Text(contenido,
+              style: const TextStyle(color: AppTheme.textoSecundario)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppTheme.textoSecundario)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.verdeNeon,
+                  foregroundColor: Colors.black),
+              child: const Text('Crear grupo'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
     try {
       await AdminService.actualizarEstadoEvento(eventoId, nuevo);
       if (mounted) {
-        showTopSnackBar(context,
-            'Evento marcado como ${_labelsEstado[nuevo] ?? nuevo}',
+        showTopSnackBar(
+            context,
+            nuevo == 'activo'
+                ? 'Grupo creado: evento activo'
+                : 'Evento marcado como ${_labelsEstado[nuevo] ?? nuevo}',
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
       }
@@ -787,6 +892,28 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
     if (plazasPorRol.isEmpty) {
       setState(() => _errorMsg = 'Define al menos una plaza en algún rol.');
       return;
+    }
+
+    // Guarda 5C: al editar no se puede bajar un rol por debajo de sus confirmados
+    // actuales. Subir plazas siempre se permite. (Quitar integrantes es aparte.)
+    if (_esEdicion) {
+      final data = widget.eventoExistente!.data();
+      final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
+      final creadoPor = data['creadoPor'] as String?;
+      final confirmadosPorRol = <String, int>{};
+      roles.forEach((uid, rol) {
+        if (uid == creadoPor) return;
+        confirmadosPorRol[rol] = (confirmadosPorRol[rol] ?? 0) + 1;
+      });
+      for (final entry in confirmadosPorRol.entries) {
+        final nuevaPlaza = plazasPorRol[entry.key] ?? 0;
+        if (nuevaPlaza < entry.value) {
+          setState(() => _errorMsg =
+              'No puedes dejar "${entry.key}" en $nuevaPlaza: ya tiene '
+              '${entry.value} confirmados. Sube las plazas o quita integrantes primero.');
+          return;
+        }
+      }
     }
 
     setState(() { _guardando = true; _errorMsg = null; });

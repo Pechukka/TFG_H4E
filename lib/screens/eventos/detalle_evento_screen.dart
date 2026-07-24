@@ -10,6 +10,7 @@ import '../../providers/idioma_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/outline_button.dart';
+import '../../utils/top_snackbar.dart';
 
 class DetalleEventoScreen extends StatelessWidget {
   final Evento evento;
@@ -188,21 +189,51 @@ class DetalleEventoScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: CustomOutlineButton(
-                      text: t.tr('ir_chat'),
-                      icon: Icons.chat_bubble_outline,
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatEventoScreen(
-                              tituloEvento: evento.titulo,
-                              eventoId: evento.id,
+                    // Chat según el estado del evento:
+                    //  activo      → abierto y escribible
+                    //  finalizado  → abierto en solo lectura (histórico)
+                    //  resto       → cerrado, con aviso "grupo no creado"
+                    child: evento.estado == 'activo'
+                        ? CustomOutlineButton(
+                            text: t.tr('ir_chat'),
+                            icon: Icons.chat_bubble_outline,
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatEventoScreen(
+                                  tituloEvento: evento.titulo,
+                                  eventoId: evento.id,
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          )
+                        : evento.estado == 'finalizado'
+                            ? CustomOutlineButton(
+                                text: t.tr('ver_historico'),
+                                icon: Icons.history,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatEventoScreen(
+                                      tituloEvento: evento.titulo,
+                                      eventoId: evento.id,
+                                      soloLectura: true,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : CustomOutlineButton(
+                                text: t.tr('grupo_no_creado'),
+                                icon: Icons.lock_outline,
+                                borderColor: AppTheme.textoTerciario,
+                                textColor: AppTheme.textoTerciario,
+                                onPressed: () => showTopSnackBar(
+                                  context,
+                                  t.tr('grupo_aviso'),
+                                  backgroundColor: AppTheme.amarilloAdvertencia,
+                                  icon: Icons.info_outline,
+                                ),
+                              ),
                   ),
 
                   const SizedBox(width: 12),

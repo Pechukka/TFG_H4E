@@ -128,6 +128,25 @@ class AdminService {
     return _firestore.collection('eventos').doc(eventoId).snapshots();
   }
 
+  // Fase 5A: nº de postulaciones PENDIENTES por evento, para la lista del admin.
+  // where('estado') es filtro de campo único (sin índice compuesto); se agrupa por
+  // eventoId en Dart. Devuelve {eventoId: nº de pendientes}.
+  static Stream<Map<String, int>> postulacionesPendientesPorEventoStream() {
+    return _firestore
+        .collection(AppConstants.colPostulaciones)
+        .where('estado', isEqualTo: 'pendiente')
+        .snapshots()
+        .map((snap) {
+      final counts = <String, int>{};
+      for (final doc in snap.docs) {
+        final eventoId = doc.data()['eventoId'] as String? ?? '';
+        if (eventoId.isEmpty) continue;
+        counts[eventoId] = (counts[eventoId] ?? 0) + 1;
+      }
+      return counts;
+    });
+  }
+
   // ─── FASE 5: Fichajes por evento ───────────────────────────────────────────
 
   // Devuelve todos los fichajes de un evento (de todos los trabajadores).
