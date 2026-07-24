@@ -90,8 +90,10 @@ class AdminService {
         .snapshots();
   }
 
-  // Obtiene una sola vez la lista de todos los trabajadores.
-  // Se usa en el formulario de crear evento para mostrar a quién asignar.
+  // Obtiene una sola vez la lista de TODOS los trabajadores (activos e inactivos).
+  // Se devuelve `activo` para que quien seleccione a quién asignar pueda filtrar; no se
+  // filtra aquí porque esta lista también sirve para resolver nombres de trabajadores
+  // ya confirmados (que podrían haberse desactivado después).
   static Future<List<Map<String, dynamic>>> getWorkers() async {
     final snapshot = await _firestore
         .collection('users')
@@ -105,6 +107,7 @@ class AdminService {
         'nombre': '${data['nombre'] ?? ''} ${data['apellidos'] ?? ''}'.trim(),
         'email': data['email'] ?? '',
         'telefono': data['telefono'] ?? '',
+        'activo': data['activo'] ?? true,
       };
     }).toList();
 

@@ -46,6 +46,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
           (w['uid'] as String): {
             'nombre': w['nombre'] ?? '',
             'telefono': w['telefono'] ?? '',
+            'activo': w['activo'] ?? true,
           }
       };
       _cargandoWorkers = false;
@@ -387,9 +388,10 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
       return;
     }
 
-    // Workers que aún no están en el evento
+    // Workers que aún no están en el evento y siguen ACTIVOS (un trabajador dado de
+    // baja no debe poder asignarse a eventos nuevos).
     final disponibles = _workers.entries
-        .where((e) => !roles.containsKey(e.key))
+        .where((e) => !roles.containsKey(e.key) && e.value['activo'] != false)
         .map((e) => {'uid': e.key, 'nombre': e.value['nombre'] ?? ''})
         .toList()
       ..sort((a, b) =>
