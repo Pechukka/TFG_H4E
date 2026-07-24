@@ -6,6 +6,7 @@ import '../../../services/admin_service.dart';
 import '../../../services/postulaciones_service.dart';
 import '../../../utils/top_snackbar.dart';
 import '../../chat/chat_evento_screen.dart';
+import 'activar_evento.dart';
 
 // Pantalla admin: postulaciones de un evento. Muestra la cobertura por rol en vivo
 // y los pendientes agrupados por rol, con Confirmar / Descartar.
@@ -125,6 +126,25 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                           const SizedBox(height: 20),
                           _Cobertura(
                               plazas: plazas, confirmados: confirmadosPorRol),
+                          // Activación manual: visible mientras el evento esté publicado.
+                          if (estadoEv == 'publicado') ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () => crearGrupoEvento(
+                                    context, widget.eventoId, data),
+                                icon: const Icon(Icons.groups, size: 18),
+                                label: const Text('Crear grupo'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppTheme.verdeNeon,
+                                  foregroundColor: Colors.black,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 24),
                           Row(
                             children: [

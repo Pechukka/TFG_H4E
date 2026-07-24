@@ -7,6 +7,7 @@ import '../../../services/admin_service.dart';
 import '../../../core/roles.dart';
 import 'admin_fichajes_evento_screen.dart';
 import 'admin_postulaciones_screen.dart';
+import 'activar_evento.dart';
 import '../../../utils/top_snackbar.dart';
 
 // Pantalla principal de eventos del admin.
@@ -463,26 +464,6 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     'finalizado': 'Finalizado',
   };
 
-  // Roles que aún no están cubiertos del todo: {rol: nº de plazas que faltan}.
-  // Excluye al admin creador (por creadoPor), igual que la cobertura del resto de la app.
-  Map<String, int> _faltantesPorRol(Map<String, dynamic> data) {
-    final plazas = (data['plazasPorRol'] as Map<String, dynamic>? ?? {})
-        .map((k, v) => MapEntry(k, (v as num).toInt()));
-    final roles = Map<String, String>.from(data['trabajadoresRoles'] ?? {});
-    final creadoPor = data['creadoPor'] as String?;
-    final confirmadosPorRol = <String, int>{};
-    roles.forEach((uid, rol) {
-      if (uid == creadoPor) return;
-      confirmadosPorRol[rol] = (confirmadosPorRol[rol] ?? 0) + 1;
-    });
-    final faltan = <String, int>{};
-    plazas.forEach((rol, plaza) {
-      final c = confirmadosPorRol[rol] ?? 0;
-      if (plaza - c > 0) faltan[rol] = plaza - c;
-    });
-    return faltan;
-  }
-
   // Control para cambiar el estado del evento (borrador → publicado → finalizado).
   // Muestra el estado actual como chip y abre un menú con los tres estados.
   Widget _estadoControl(
@@ -542,51 +523,18 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
       Map<String, dynamic> data) async {
     if (nuevo == actual) return;
 
-    // Activación manual ("Crear grupo"): avisa de la cobertura pero deja activar
-    // aunque falten plazas. El admin decide.
+    // Activación manual ("Crear grupo"): mismo flujo que el botón de la pantalla de
+    // gestión del evento (avisa de la cobertura pero deja activar; decide el admin).
     if (nuevo == 'activo') {
-      final faltan = _faltantesPorRol(data);
-      final contenido = faltan.isEmpty
-          ? 'El equipo está completo. Se creará el grupo y el evento pasará a activo '
-              '(sale del feed y se abre el chat).'
-          : 'Aún faltan plazas por cubrir:\n\n'
-              '${faltan.entries.map((e) => '· ${e.key}: faltan ${e.value}').join('\n')}'
-              '\n\n¿Crear el grupo igualmente? El evento saldrá del feed.';
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.fondoCard,
-          title: const Text('Crear grupo',
-              style: TextStyle(color: AppTheme.textoBlanco)),
-          content: Text(contenido,
-              style: const TextStyle(color: AppTheme.textoSecundario)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppTheme.textoSecundario)),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.verdeNeon,
-                  foregroundColor: Colors.black),
-              child: const Text('Crear grupo'),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return;
+      await crearGrupoEvento(context, eventoId, data);
+      return;
     }
 
     try {
       await AdminService.actualizarEstadoEvento(eventoId, nuevo);
       if (mounted) {
         showTopSnackBar(
-            context,
-            nuevo == 'activo'
-                ? 'Grupo creado: evento activo'
-                : 'Evento marcado como ${_labelsEstado[nuevo] ?? nuevo}',
+            context, 'Evento marcado como ${_labelsEstado[nuevo] ?? nuevo}',
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
       }
