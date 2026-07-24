@@ -21,6 +21,10 @@ class AppConstants {
   static const String colNominas = 'nominas';
   static const String colPostulaciones = 'postulaciones';
   static const String colNotificaciones = 'notificaciones';
+  // Subcolección eventos/{id}/equipo/{uid} → {nombre, rol, telefono}.
+  // El teléfono vive aquí (y NO en trabajadoresInfo) porque solo la pueden leer los
+  // miembros del evento; el doc del evento es legible por cualquiera si está publicado.
+  static const String subColEquipo = 'equipo';
 
   // Rutas de Storage
   static const String storageNominas = 'nominas';

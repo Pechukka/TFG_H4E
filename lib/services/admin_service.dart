@@ -90,8 +90,10 @@ class AdminService {
         .snapshots();
   }
 
-  // Obtiene una sola vez la lista de todos los trabajadores.
-  // Se usa en el formulario de crear evento para mostrar a quién asignar.
+  // Obtiene una sola vez la lista de TODOS los trabajadores (activos e inactivos).
+  // Se devuelve `activo` para que quien seleccione a quién asignar pueda filtrar; no se
+  // filtra aquí porque esta lista también sirve para resolver nombres de trabajadores
+  // ya confirmados (que podrían haberse desactivado después).
   static Future<List<Map<String, dynamic>>> getWorkers() async {
     final snapshot = await _firestore
         .collection('users')
@@ -105,6 +107,7 @@ class AdminService {
         'nombre': '${data['nombre'] ?? ''} ${data['apellidos'] ?? ''}'.trim(),
         'email': data['email'] ?? '',
         'telefono': data['telefono'] ?? '',
+        'activo': data['activo'] ?? true,
       };
     }).toList();
 
@@ -466,8 +469,13 @@ class AdminService {
     required String estado, // 'borrador' | 'publicado' | 'finalizado'
     required String adminUid,
     required String adminNombre,
+    required String adminTelefono,
   }) async {
-    await _firestore.collection('eventos').add({
+    // Id generado a mano para poder escribir evento + subcolección equipo en un batch.
+    final ref = _firestore.collection('eventos').doc();
+    final batch = _firestore.batch();
+
+    batch.set(ref, {
       'titulo': titulo,
       'descripcion': descripcion,
       'ubicacion': ubicacion,
@@ -491,6 +499,15 @@ class AdminService {
       'cobroPorHora': 0.0,
       'creadoPor': adminUid,
     });
+
+    // Subcolección equipo: aquí SÍ va el teléfono (solo la leen los miembros).
+    batch.set(ref.collection(AppConstants.subColEquipo).doc(adminUid), {
+      'nombre': adminNombre,
+      'rol': 'Coordinador',
+      'telefono': adminTelefono,
+    });
+
+    await batch.commit();
   }
 
   // ─── FASE 1: Datos del dashboard admin ──────────────────────────────────────

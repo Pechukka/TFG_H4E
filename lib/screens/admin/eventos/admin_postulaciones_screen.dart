@@ -6,6 +6,7 @@ import '../../../services/admin_service.dart';
 import '../../../services/postulaciones_service.dart';
 import '../../../utils/top_snackbar.dart';
 import '../../chat/chat_evento_screen.dart';
+import 'activar_evento.dart';
 
 // Pantalla admin: postulaciones de un evento. Muestra la cobertura por rol en vivo
 // y los pendientes agrupados por rol, con Confirmar / Descartar.
@@ -39,9 +40,15 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
     final lista = await AdminService.getWorkers();
     if (!mounted) return;
     setState(() {
+      // El teléfono se guarda aquí (memoria del admin, que sí puede leer users) para
+      // escribirlo luego en la subcolección `equipo` del evento.
       _workers = {
         for (final w in lista)
-          (w['uid'] as String): {'nombre': w['nombre'] ?? ''}
+          (w['uid'] as String): {
+            'nombre': w['nombre'] ?? '',
+            'telefono': w['telefono'] ?? '',
+            'activo': w['activo'] ?? true,
+          }
       };
       _cargandoWorkers = false;
     });
@@ -119,6 +126,25 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                           const SizedBox(height: 20),
                           _Cobertura(
                               plazas: plazas, confirmados: confirmadosPorRol),
+                          // Activación manual: visible mientras el evento esté publicado.
+                          if (estadoEv == 'publicado') ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () => crearGrupoEvento(
+                                    context, widget.eventoId, data),
+                                icon: const Icon(Icons.groups, size: 18),
+                                label: const Text('Crear grupo'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppTheme.verdeNeon,
+                                  foregroundColor: Colors.black,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 24),
                           Row(
                             children: [
@@ -382,9 +408,10 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
       return;
     }
 
-    // Workers que aún no están en el evento
+    // Workers que aún no están en el evento y siguen ACTIVOS (un trabajador dado de
+    // baja no debe poder asignarse a eventos nuevos).
     final disponibles = _workers.entries
-        .where((e) => !roles.containsKey(e.key))
+        .where((e) => !roles.containsKey(e.key) && e.value['activo'] != false)
         .map((e) => {'uid': e.key, 'nombre': e.value['nombre'] ?? ''})
         .toList()
       ..sort((a, b) =>
@@ -465,12 +492,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
 
     if (confirmar != true || uidSel == null) return;
     final nombre = (_workers[uidSel]?['nombre'] as String?) ?? '';
+    final telefono = (_workers[uidSel]?['telefono'] as String?) ?? '';
     try {
       await PostulacionesService.anadirIntegrante(
         eventoId: widget.eventoId,
         trabajadorId: uidSel!,
         rol: rolSel,
         nombre: nombre,
+        telefono: telefono,
       );
       if (mounted) {
         showTopSnackBar(context, 'Integrante añadido',
@@ -603,6 +632,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         trabajadorId: p.trabajadorId,
         rol: p.rol,
         nombre: (info?['nombre'] as String?) ?? '',
+        telefono: (info?['telefono'] as String?) ?? '',
         tituloEvento: widget.tituloEvento,
       );
       if (mounted) {

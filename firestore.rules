@@ -58,6 +58,15 @@ service cloud.firestore {
       allow create, update, delete: if esAdmin();
     }
 
+    // ---------- eventos/{id}/equipo (fichas del equipo, CON teléfono) ----------
+    // El teléfono vive aquí y NO en trabajadoresInfo: el doc del evento lo lee cualquier
+    // worker si está 'publicado' (feed), pero esta subcolección solo la leen los MIEMBROS
+    // del evento (uid en trabajadoresIds del padre) o el admin. Escribe solo el admin.
+    match /eventos/{eventoId}/equipo/{uid} {
+      allow read: if esMiembroEvento(eventoId);
+      allow write: if esAdmin();
+    }
+
     // ---------- postulaciones (respuestas del worker al feed) ----------
     // El worker lee, crea y borra SOLO las suyas. Al crear, el estado solo puede ser
     // 'pendiente' o 'rechazado_por_worker' — nunca 'confirmado' (eso es del admin) — y

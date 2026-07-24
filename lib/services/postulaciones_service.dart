@@ -43,6 +43,7 @@ class PostulacionesService {
     required String trabajadorId,
     required String rol,
     required String nombre,
+    required String telefono,
     required String tituloEvento,
   }) async {
     final eventoRef =
@@ -93,6 +94,13 @@ class PostulacionesService {
     batch.update(eventoRef, eventoUpdates);
     batch.update(postulacionRef, {'estado': Postulacion.confirmado});
 
+    // Subcolección equipo: el teléfono vive aquí (solo lo leen los miembros del evento).
+    batch.set(eventoRef.collection(AppConstants.subColEquipo).doc(trabajadorId), {
+      'nombre': nombre,
+      'rol': rol,
+      'telefono': telefono,
+    });
+
     // Notificación al worker, en el MISMO batch. La Cloud Function onNotificacionCreada
     // la convierte en push. Campos del esquema existente (tipo enum + `timestamp`).
     final titulo = tituloEvento.isEmpty ? 'el evento' : tituloEvento;
@@ -123,6 +131,7 @@ class PostulacionesService {
     required String trabajadorId,
     required String rol,
     required String nombre,
+    required String telefono,
   }) async {
     final eventoRef =
         _firestore.collection(AppConstants.colEventos).doc(eventoId);
@@ -161,7 +170,16 @@ class PostulacionesService {
     if (completo && estadoActual == 'publicado') {
       updates['estado'] = 'activo';
     }
-    await eventoRef.update(updates);
+
+    // Evento + subcolección equipo (con teléfono) en un batch.
+    final batch = _firestore.batch();
+    batch.update(eventoRef, updates);
+    batch.set(eventoRef.collection(AppConstants.subColEquipo).doc(trabajadorId), {
+      'nombre': nombre,
+      'rol': rol,
+      'telefono': telefono,
+    });
+    await batch.commit();
   }
 
   // Fase 5C: el admin quita a un integrante del evento. Lo saca de
@@ -188,6 +206,9 @@ class PostulacionesService {
       'trabajadoresRoles.$trabajadorId': FieldValue.delete(),
       'trabajadoresInfo.$trabajadorId': FieldValue.delete(),
     });
+    // Y su ficha de la subcolección equipo (con el teléfono).
+    batch.delete(
+        eventoRef.collection(AppConstants.subColEquipo).doc(trabajadorId));
     for (final d in delEvento) {
       batch.update(d.reference, {'estado': Postulacion.descartado});
     }
