@@ -239,6 +239,13 @@ class Traducciones {
       'mensaje_editado': 'editado',
       'error_editar': 'Error al editar el mensaje',
       'error_eliminar': 'Error al eliminar el mensaje',
+      // ── Panel admin: shell y sidebar ──
+      'admin_panel': 'Panel Admin',
+      'admin_inicio': 'Inicio',
+      'admin_trabajadores': 'Trabajadores',
+      'admin_eventos': 'Eventos',
+      'admin_nominas': 'Nóminas',
+      'admin_logout_msg': '¿Seguro que quieres cerrar sesión?',
     },
     'en': {
       'nav_escritorio': 'Dashboard',
@@ -479,6 +486,13 @@ class Traducciones {
       'mensaje_editado': 'edited',
       'error_editar': 'Error editing message',
       'error_eliminar': 'Error deleting message',
+      // ── Admin panel: shell and sidebar ──
+      'admin_panel': 'Admin panel',
+      'admin_inicio': 'Home',
+      'admin_trabajadores': 'Workers',
+      'admin_eventos': 'Events',
+      'admin_nominas': 'Payroll',
+      'admin_logout_msg': 'Are you sure you want to sign out?',
     },
   };
 
