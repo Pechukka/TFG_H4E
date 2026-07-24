@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -246,7 +245,8 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
           eventoId: widget.eventoId,
           remitenteId: authProvider.currentUserId ?? '',
           remitenteNombre: authProvider.currentUser?.nombre ?? 'Trabajador',
-          imagen: File(picked.path),
+          // Se pasa el XFile tal cual: el provider decide web (bytes) o móvil (File).
+          imagen: picked,
           texto: _messageController.text.trim().isEmpty
               ? null
               : _messageController.text.trim(),

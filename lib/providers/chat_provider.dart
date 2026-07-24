@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
 import '../models/mensaje.dart';
 import '../services/chat_service.dart';
 import '../services/storage_service.dart';
@@ -70,15 +72,29 @@ class ChatProvider with ChangeNotifier {
     required String eventoId,
     required String remitenteId,
     required String remitenteNombre,
-    required File imagen,
+    required XFile imagen,
     String? texto,
   }) async {
     _isSending = true;
     _clearError();
     notifyListeners();
     try {
-      final imagenUrl =
-          await _storageService.subirImagenChat(imagen, eventoId);
+      // En web no existe dart:io File: se suben los bytes con putData.
+      // En móvil se mantiene el flujo con putFile.
+      final String imagenUrl;
+      if (kIsWeb) {
+        final bytes = await imagen.readAsBytes();
+        final extension = path.extension(imagen.name);
+        imagenUrl = await _storageService.subirImagenChatBytes(
+          bytes: bytes,
+          eventoId: eventoId,
+          extension: extension,
+          contentType: imagen.mimeType ?? _contentTypeDe(extension),
+        );
+      } else {
+        imagenUrl =
+            await _storageService.subirImagenChat(File(imagen.path), eventoId);
+      }
       await _chatService.enviarMensajeConImagen(
         eventoId: eventoId,
         remitenteId: remitenteId,
@@ -94,6 +110,22 @@ class ChatProvider with ChangeNotifier {
       _isSending = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  // Tipo MIME a partir de la extensión, por si el picker no lo trae (web).
+  String _contentTypeDe(String extension) {
+    switch (extension.toLowerCase()) {
+      case '.png':
+        return 'image/png';
+      case '.gif':
+        return 'image/gif';
+      case '.webp':
+        return 'image/webp';
+      case '.heic':
+        return 'image/heic';
+      default:
+        return 'image/jpeg';
     }
   }
 
