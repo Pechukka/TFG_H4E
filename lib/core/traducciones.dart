@@ -64,6 +64,7 @@ class Traducciones {
       'dias_disponibles': 'DÍAS DISPONIBLES',
       'solicitar_vacaciones': 'Solicitar vacaciones',
       'sin_nominas': 'No hay nóminas disponibles',
+      'descargar_pdf': 'Descargar PDF',
       'no_configurado': 'No configurado',
       'no_configurada': 'No configurada',
       'escritorio': 'Escritorio',
@@ -356,6 +357,7 @@ class Traducciones {
       'ev_quitar_fecha': 'Quitar filtro de fecha',
       'ev_ver_postulaciones': 'Ver postulaciones',
       'ev_ver_fichajes': 'Ver fichajes',
+      'ev_sin_titulo': 'Sin título',
       // ── Panel admin: postulaciones / gestion del equipo ──
       'pl_volver': 'Volver',
       'pl_titulo': 'Postulaciones',
@@ -459,6 +461,20 @@ class Traducciones {
       'mp_puesto': 'Puesto:',
       'mp_confirmada': 'Confirmada',
       'mp_pendiente': 'Pendiente',
+      // Notificaciones (worker)
+      'notif_marcar_todas': 'Marcar todas como leídas',
+      'notif_vacio': 'No tienes notificaciones',
+      // Primer login (establecer contraseña)
+      'plogin_titulo': 'Establece tu contraseña',
+      'plogin_subtitulo':
+          'Es tu primer acceso. Elige una contraseña personal para continuar.',
+      'plogin_nueva': 'Nueva contraseña',
+      'plogin_min8': 'Mínimo 8 caracteres',
+      'plogin_confirmar': 'Confirmar contraseña',
+      'plogin_no_coinciden': 'Las contraseñas no coinciden',
+      'plogin_guardar': 'Guardar y continuar',
+      'plogin_error': 'Error al cambiar la contraseña',
+      'plogin_obligatorio': 'Campo obligatorio',
     },
     'en': {
       'nav_escritorio': 'Dashboard',
@@ -524,6 +540,7 @@ class Traducciones {
       'dias_disponibles': 'AVAILABLE DAYS',
       'solicitar_vacaciones': 'Request holidays',
       'sin_nominas': 'No payslips available',
+      'descargar_pdf': 'Download PDF',
       'no_configurado': 'Not configured',
       'no_configurada': 'Not configured',
       'escritorio': 'Dashboard',
@@ -919,6 +936,20 @@ class Traducciones {
       'mp_puesto': 'Position:',
       'mp_confirmada': 'Confirmed',
       'mp_pendiente': 'Pending',
+      // Notificaciones (worker)
+      'notif_marcar_todas': 'Mark all as read',
+      'notif_vacio': 'You have no notifications',
+      // Primer login (establecer contraseña)
+      'plogin_titulo': 'Set your password',
+      'plogin_subtitulo':
+          "It's your first login. Choose a personal password to continue.",
+      'plogin_nueva': 'New password',
+      'plogin_min8': 'At least 8 characters',
+      'plogin_confirmar': 'Confirm password',
+      'plogin_no_coinciden': "Passwords don't match",
+      'plogin_guardar': 'Save and continue',
+      'plogin_error': 'Error changing the password',
+      'plogin_obligatorio': 'Required field',
     },
   };
 
