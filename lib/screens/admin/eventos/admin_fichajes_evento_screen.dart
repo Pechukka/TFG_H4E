@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 
 // Pantalla que muestra los fichajes de todos los trabajadores en un evento.
@@ -80,6 +82,7 @@ class _AdminFichajesEventoScreenState
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       appBar: AppBar(
@@ -90,8 +93,8 @@ class _AdminFichajesEventoScreenState
           children: [
             Text(widget.tituloEvento,
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-            const Text('Registro de fichajes',
-                style: TextStyle(fontSize: 12, color: AppTheme.textoSecundario)),
+            Text(t.tr('fich_registro'),
+                style: const TextStyle(fontSize: 12, color: AppTheme.textoSecundario)),
           ],
         ),
         elevation: 0,
@@ -110,26 +113,28 @@ class _AdminFichajesEventoScreenState
   }
 
   Widget _buildSinFichajes() {
-    return const Center(
+    final t = context.watch<IdiomaProvider>();
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.fingerprint, color: AppTheme.textoSecundario, size: 48),
-          SizedBox(height: 16),
-          Text('Ningún trabajador ha fichado todavía',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          const Icon(Icons.fingerprint, color: AppTheme.textoSecundario, size: 48),
+          const SizedBox(height: 16),
+          Text(t.tr('fich_sin_fichajes'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
         ],
       ),
     );
   }
 
   Widget _buildTabla() {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${_fichajes.length} registro(s) encontrado(s)',
+          Text('${_fichajes.length} ${t.tr('fich_registros')}',
               style: const TextStyle(color: AppTheme.textoSecundario, fontSize: 12)),
           const SizedBox(height: 16),
           // Cabecera de la tabla
@@ -146,12 +151,12 @@ class _AdminFichajesEventoScreenState
             ),
             child: Row(
               children: [
-                _cab('TRABAJADOR', flex: 3),
-                _cab('ENTRADA', flex: 2),
-                _cab('UBIC. ENTRADA', flex: 2),
-                _cab('SALIDA', flex: 2),
-                _cab('UBIC. SALIDA', flex: 2),
-                _cab('HORAS', flex: 1),
+                _cab(t.tr('fich_col_trabajador'), flex: 3),
+                _cab(t.tr('fich_col_entrada'), flex: 2),
+                _cab(t.tr('fich_col_ubic_entrada'), flex: 2),
+                _cab(t.tr('fich_col_salida'), flex: 2),
+                _cab(t.tr('fich_col_ubic_salida'), flex: 2),
+                _cab(t.tr('fich_col_horas'), flex: 1),
               ],
             ),
           ),
@@ -178,6 +183,7 @@ class _AdminFichajesEventoScreenState
   }
 
   Widget _buildFila(Map<String, dynamic> f) {
+    final t = context.watch<IdiomaProvider>();
     final uid = f['trabajadorId'] as String? ?? '';
     final nombre = _nombresWorkers[uid] ?? uid;
     final entrada = f['entrada'];
@@ -215,7 +221,7 @@ class _AdminFichajesEventoScreenState
           ),
           Expanded(
             flex: 2,
-            child: _botonUbicacion(context, ubicEntrada, 'Entrada'),
+            child: _botonUbicacion(context, ubicEntrada, t.tr('fich_entrada')),
           ),
           Expanded(
             flex: 2,
@@ -229,7 +235,7 @@ class _AdminFichajesEventoScreenState
           ),
           Expanded(
             flex: 2,
-            child: _botonUbicacion(context, ubicSalida, 'Salida'),
+            child: _botonUbicacion(context, ubicSalida, t.tr('fich_salida')),
           ),
           Expanded(
             flex: 1,
@@ -253,6 +259,7 @@ class _AdminFichajesEventoScreenState
           style: TextStyle(color: AppTheme.textoTerciario, fontSize: 12));
     }
 
+    final t = context.read<IdiomaProvider>();
     final lat = (ubic['lat'] as num).toDouble();
     final lng = (ubic['lng'] as num).toDouble();
 
@@ -260,7 +267,7 @@ class _AdminFichajesEventoScreenState
       onPressed: () => _mostrarMapa(context, lat, lng, tipo),
       icon: const Icon(Icons.location_on_outlined,
           color: AppTheme.verdeNeon, size: 14),
-      label: const Text('Ver', style: TextStyle(color: AppTheme.verdeNeon, fontSize: 12)),
+      label: Text(t.tr('fich_ver'), style: const TextStyle(color: AppTheme.verdeNeon, fontSize: 12)),
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         minimumSize: Size.zero,
@@ -271,6 +278,7 @@ class _AdminFichajesEventoScreenState
 
   // Abre un diálogo con un mapa centrado en las coordenadas del fichaje
   void _mostrarMapa(BuildContext context, double lat, double lng, String tipo) {
+    final t = context.read<IdiomaProvider>();
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -287,7 +295,7 @@ class _AdminFichajesEventoScreenState
                   children: [
                     const Icon(Icons.location_on, color: AppTheme.verdeNeon, size: 18),
                     const SizedBox(width: 8),
-                    Text('Ubicación de $tipo',
+                    Text('${t.tr('fich_ubicacion_de')} $tipo',
                         style: Theme.of(context).textTheme.titleSmall),
                     const Spacer(),
                     IconButton(
