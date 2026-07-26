@@ -453,6 +453,12 @@ class Traducciones {
       'feed_postularme': 'POSTULARME',
       'feed_rechazar': 'RECHAZAR',
       'feed_plazas_libres': 'PLAZAS LIBRES',
+      // Mis postulaciones (worker)
+      'mp_vacio': 'Todavía no te has postulado a nada',
+      'mp_evento': 'Evento',
+      'mp_puesto': 'Puesto:',
+      'mp_confirmada': 'Confirmada',
+      'mp_pendiente': 'Pendiente',
     },
     'en': {
       'nav_escritorio': 'Dashboard',
@@ -907,6 +913,12 @@ class Traducciones {
       'feed_postularme': 'APPLY',
       'feed_rechazar': 'REJECT',
       'feed_plazas_libres': 'AVAILABLE SPOTS',
+      // Mis postulaciones (worker)
+      'mp_vacio': "You haven't applied to anything yet",
+      'mp_evento': 'Event',
+      'mp_puesto': 'Position:',
+      'mp_confirmada': 'Confirmed',
+      'mp_pendiente': 'Pending',
     },
   };
 

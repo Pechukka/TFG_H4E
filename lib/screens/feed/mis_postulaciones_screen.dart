@@ -4,6 +4,7 @@ import 'package:hands4events/core/theme.dart';
 import '../../models/evento.dart';
 import '../../models/postulacion.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/idioma_provider.dart';
 import '../../services/eventos_service.dart';
 import '../../services/postulaciones_service.dart';
 import '../../widgets/app_bar_custom.dart';
@@ -22,13 +23,14 @@ class _MisPostulacionesScreenState extends State<MisPostulacionesScreen> {
   @override
   Widget build(BuildContext context) {
     final uid = context.read<AuthProvider>().currentUserId ?? '';
+    final t = context.watch<IdiomaProvider>();
 
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
-      appBar: const AppBarCustom(
+      appBar: AppBarCustom(
         showLogo: true,
         showBackButton: true,
-        title: 'Mis postulaciones',
+        title: t.tr('feed_mis_postulaciones'),
       ),
       body: StreamBuilder<List<Postulacion>>(
         stream: PostulacionesService.misPostulacionesStream(uid),
@@ -49,15 +51,15 @@ class _MisPostulacionesScreenState extends State<MisPostulacionesScreen> {
               .compareTo(a.createdAt ?? DateTime(0)));
 
           if (lista.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.assignment_outlined,
+                  const Icon(Icons.assignment_outlined,
                       color: AppTheme.textoSecundario, size: 48),
-                  SizedBox(height: 16),
-                  Text('Todavía no te has postulado a nada',
-                      style: TextStyle(color: AppTheme.textoSecundario)),
+                  const SizedBox(height: 16),
+                  Text(t.tr('mp_vacio'),
+                      style: const TextStyle(color: AppTheme.textoSecundario)),
                 ],
               ),
             );
@@ -75,13 +77,14 @@ class _MisPostulacionesScreenState extends State<MisPostulacionesScreen> {
   }
 
   Widget _tarjeta(Postulacion p) {
+    final t = context.watch<IdiomaProvider>();
     final confirmada = p.estado == Postulacion.confirmado;
 
     return FutureBuilder<Evento?>(
       future: _eventosService.getEvento(p.eventoId),
       builder: (context, snap) {
         final evento = snap.data;
-        final titulo = evento?.titulo ?? 'Evento';
+        final titulo = evento?.titulo ?? t.tr('mp_evento');
         final fecha = evento == null
             ? ''
             : '${evento.fechaInicio.day.toString().padLeft(2, '0')}/${evento.fechaInicio.month.toString().padLeft(2, '0')}/${evento.fechaInicio.year} · ${evento.horaFormateada}';
@@ -109,7 +112,7 @@ class _MisPostulacionesScreenState extends State<MisPostulacionesScreen> {
                               color: AppTheme.textoSecundario, fontSize: 12)),
                     const SizedBox(height: 4),
                     if (p.rol.isNotEmpty)
-                      Text('Puesto: ${p.rol}',
+                      Text('${t.tr('mp_puesto')} ${p.rol}',
                           style: const TextStyle(
                               color: AppTheme.textoTerciario, fontSize: 12)),
                   ],
@@ -125,9 +128,10 @@ class _MisPostulacionesScreenState extends State<MisPostulacionesScreen> {
   }
 
   Widget _badgeEstado(bool confirmada) {
+    final t = context.watch<IdiomaProvider>();
     final color =
         confirmada ? AppTheme.verdeNeon : AppTheme.amarilloAdvertencia;
-    final texto = confirmada ? 'Confirmada' : 'Pendiente';
+    final texto = confirmada ? t.tr('mp_confirmada') : t.tr('mp_pendiente');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
