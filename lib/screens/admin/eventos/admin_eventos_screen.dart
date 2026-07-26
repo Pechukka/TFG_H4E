@@ -274,7 +274,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
       QueryDocumentSnapshot<Map<String, dynamic>> doc, int pendientes) {
     final t = context.watch<IdiomaProvider>();
     final data = doc.data();
-    final titulo = data['titulo'] ?? 'Sin título';
+    final titulo = data['titulo'] ?? t.tr('ev_sin_titulo');
     final ubicacion = data['ubicacion'] ?? '';
     final fechaInicio = (data['fechaInicio'] as Timestamp).toDate();
     final fechaFin = (data['fechaFin'] as Timestamp).toDate();

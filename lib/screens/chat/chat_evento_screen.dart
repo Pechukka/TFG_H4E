@@ -309,7 +309,7 @@ class _ChatEventoScreenState extends State<ChatEventoScreen> {
     String? replyTextoPreview;
     if (reply != null) {
       if (reply.tipo == 'ubicacion') {
-        replyTextoPreview = '📍 Ubicación';
+        replyTextoPreview = '📍 ${context.read<IdiomaProvider>().tr('ubicacion_compartida')}';
       } else {
         final t = reply.texto;
         replyTextoPreview = t.length > 60 ? '${t.substring(0, 60)}…' : t;
