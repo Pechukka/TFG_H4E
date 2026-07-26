@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import 'package:hands4events/core/constants.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../utils/pdf_generator.dart';
 import '../../../utils/top_snackbar.dart';
@@ -59,7 +61,9 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
     if (!mounted) return;
     setState(() => _enviadas.add(uid));
 
-    showTopSnackBar(context, 'Nómina de ${worker['nombre']} enviada correctamente',
+    final t = context.read<IdiomaProvider>();
+    showTopSnackBar(context,
+        '${t.tr('nom_enviada_pre')}${worker['nombre']}${t.tr('nom_enviada_post')}',
         backgroundColor: AppTheme.verdeNeon, icon: Icons.check_circle_outline);
   }
 
@@ -87,25 +91,27 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Nóminas', style: Theme.of(context).textTheme.headlineSmall),
+          Text(t.tr('admin_nominas'),
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 20),
           _buildSelectorMes(),
           const SizedBox(height: 24),
           if (_calculando)
-            const Expanded(
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: AppTheme.verdeNeon),
-                    SizedBox(height: 16),
-                    Text('Calculando horas y sueldos...',
-                        style: TextStyle(color: AppTheme.textoSecundario)),
+                    const CircularProgressIndicator(color: AppTheme.verdeNeon),
+                    const SizedBox(height: 16),
+                    Text(t.tr('nom_calculando'),
+                        style: const TextStyle(color: AppTheme.textoSecundario)),
                   ],
                 ),
               ),
@@ -120,6 +126,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
   }
 
   Widget _buildSelectorMes() {
+    final t = context.watch<IdiomaProvider>();
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -135,7 +142,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               dropdownColor: AppTheme.fondoCard,
               style: const TextStyle(color: AppTheme.textoBlanco),
               decoration: InputDecoration(
-                labelText: 'Mes',
+                labelText: t.tr('nom_mes'),
                 labelStyle: const TextStyle(
                     color: AppTheme.textoSecundario, fontSize: 13),
                 filled: true,
@@ -174,7 +181,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               dropdownColor: AppTheme.fondoCard,
               style: const TextStyle(color: AppTheme.textoBlanco),
               decoration: InputDecoration(
-                labelText: 'Año',
+                labelText: t.tr('nom_anio'),
                 labelStyle: const TextStyle(
                     color: AppTheme.textoSecundario, fontSize: 13),
                 filled: true,
@@ -207,7 +214,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
           FilledButton.icon(
             onPressed: _calculando ? null : _calcular,
             icon: const Icon(Icons.calculate_outlined, size: 18),
-            label: const Text('Calcular'),
+            label: Text(t.tr('nom_calcular')),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.verdeNeon,
               foregroundColor: Colors.black,
@@ -221,22 +228,23 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
   }
 
   Widget _buildInstrucciones() {
-    return const Center(
+    final t = context.watch<IdiomaProvider>();
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.description_outlined,
+          const Icon(Icons.description_outlined,
               color: AppTheme.textoSecundario, size: 48),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            'Selecciona un mes y pulsa "Calcular"',
-            style: TextStyle(color: AppTheme.textoSecundario),
+            t.tr('nom_instr1'),
+            style: const TextStyle(color: AppTheme.textoSecundario),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Verás qué trabajadores han fichado ese mes\ny podrás enviarles su nómina.',
+            t.tr('nom_instr2'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textoTerciario, fontSize: 12),
+            style: const TextStyle(color: AppTheme.textoTerciario, fontSize: 12),
           ),
         ],
       ),
@@ -244,6 +252,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
   }
 
   Widget _buildResultados() {
+    final t = context.watch<IdiomaProvider>();
     if (_resumen.isEmpty) {
       return Center(
         child: Column(
@@ -253,13 +262,13 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                 color: AppTheme.textoSecundario, size: 48),
             const SizedBox(height: 16),
             Text(
-              'Ningún trabajador ha trabajado en ${AppConstants.meses[_mes]} $_anio',
+              '${t.tr('nom_sin_trabajo')} ${AppConstants.meses[_mes]} $_anio',
               style: const TextStyle(color: AppTheme.textoSecundario),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Solo aparecen trabajadores con fichajes finalizados en ese mes.',
-              style: TextStyle(
+            Text(
+              t.tr('nom_sin_trabajo2'),
+              style: const TextStyle(
                   color: AppTheme.textoTerciario, fontSize: 12),
             ),
           ],
@@ -279,12 +288,12 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_resumen.length} trabajador(es) en ${AppConstants.meses[_mes]} $_anio',
+                  '${_resumen.length} ${t.tr('nom_trabajadores_en')} ${AppConstants.meses[_mes]} $_anio',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Las nóminas enviadas quedan visibles en la app del trabajador.',
+                  t.tr('nom_visible'),
                   style: const TextStyle(
                       color: AppTheme.textoTerciario, fontSize: 11),
                 ),
@@ -295,7 +304,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               FilledButton.icon(
                 onPressed: _enviarTodas,
                 icon: const Icon(Icons.send_outlined, size: 16),
-                label: const Text('Enviar todas'),
+                label: Text(t.tr('nom_enviar_todas')),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.verdeNeon,
                   foregroundColor: Colors.black,
@@ -303,12 +312,12 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               )
             else
               Row(
-                children: const [
-                  Icon(Icons.check_circle,
+                children: [
+                  const Icon(Icons.check_circle,
                       color: AppTheme.verdeNeon, size: 18),
-                  SizedBox(width: 6),
-                  Text('Todas enviadas',
-                      style: TextStyle(
+                  const SizedBox(width: 6),
+                  Text(t.tr('nom_todas_enviadas'),
+                      style: const TextStyle(
                           color: AppTheme.verdeNeon, fontSize: 13)),
                 ],
               ),
@@ -327,6 +336,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
   }
 
   Widget _buildCardWorker(Map<String, dynamic> worker) {
+    final t = context.watch<IdiomaProvider>();
     final uid = worker['uid'] as String;
     final nombre = worker['nombre'] as String;
     final horas = worker['totalHoras'] as double;
@@ -377,7 +387,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                       Text(nombre,
                           style: Theme.of(context).textTheme.titleSmall),
                       Text(
-                        '${horas.toStringAsFixed(1)}h trabajadas · ${eventos.length} evento(s)',
+                        '${horas.toStringAsFixed(1)}${t.tr('nom_trabajadas')} ${eventos.length} ${t.tr('nom_eventos_count')}',
                         style: const TextStyle(
                             color: AppTheme.textoSecundario, fontSize: 12),
                       ),
@@ -389,7 +399,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${neto.toStringAsFixed(2)}€ neto',
+                      '${neto.toStringAsFixed(2)}${t.tr('nom_neto')}',
                       style: const TextStyle(
                         color: AppTheme.verdeNeon,
                         fontWeight: FontWeight.bold,
@@ -397,7 +407,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                       ),
                     ),
                     Text(
-                      '${bruto.toStringAsFixed(2)}€ bruto',
+                      '${bruto.toStringAsFixed(2)}${t.tr('nom_bruto')}',
                       style: const TextStyle(
                           color: AppTheme.textoSecundario, fontSize: 11),
                     ),
@@ -425,7 +435,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                   FilledButton.icon(
                     onPressed: () => _enviarNomina(worker),
                     icon: const Icon(Icons.send_outlined, size: 15),
-                    label: const Text('Enviar nómina'),
+                    label: Text(t.tr('nom_enviar')),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.verdeNeon,
                       foregroundColor: Colors.black,
@@ -434,7 +444,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                   const SizedBox(width: 8),
                   // Botón secundario: solo descargar PDF sin enviar
                   Tooltip(
-                    message: 'Descargar PDF sin enviar',
+                    message: t.tr('nom_descargar_tooltip'),
                     child: IconButton(
                       onPressed: () => _descargarPdf(worker),
                       icon: const Icon(Icons.download_outlined,
@@ -505,9 +515,9 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    'Bruto: ${bruto.toStringAsFixed(2)}€  '
-                    '–  IRPF 15% + SS 6.35%  '
-                    '=  Neto: ${neto.toStringAsFixed(2)}€',
+                    '${t.tr('nom_bruto_label')}: ${bruto.toStringAsFixed(2)}€  '
+                    '–  ${t.tr('nom_deducciones')}  '
+                    '=  ${t.tr('nom_neto_label')}: ${neto.toStringAsFixed(2)}€',
                     style: const TextStyle(
                         color: AppTheme.textoSecundario, fontSize: 11),
                   ),
