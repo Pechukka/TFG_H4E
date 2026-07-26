@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
-import 'package:hands4events/core/constants.dart';
+import 'package:hands4events/core/traducciones.dart';
 import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../utils/pdf_generator.dart';
@@ -69,9 +69,10 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
 
   // Descarga el PDF de la nómina (solo para el admin, no se sube a ningún lado)
   Future<void> _descargarPdf(Map<String, dynamic> worker) async {
+    final t = context.read<IdiomaProvider>();
     await PdfGenerator.descargarNomina(
       nombre: worker['nombre'] as String,
-      mes: AppConstants.meses[_mes],
+      mes: Traducciones.mes(t.idioma, _mes),
       anio: _anio,
       eventos: List<Map<String, dynamic>>.from(worker['eventos'] as List),
       totalHoras: worker['totalHoras'] as double,
@@ -161,7 +162,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               items: List.generate(12, (i) {
                 return DropdownMenuItem(
                   value: i + 1,
-                  child: Text(AppConstants.meses[i + 1]),
+                  child: Text(Traducciones.mes(t.idioma, i + 1)),
                 );
               }),
               onChanged: (val) {
@@ -262,7 +263,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
                 color: AppTheme.textoSecundario, size: 48),
             const SizedBox(height: 16),
             Text(
-              '${t.tr('nom_sin_trabajo')} ${AppConstants.meses[_mes]} $_anio',
+              '${t.tr('nom_sin_trabajo')} ${Traducciones.mes(t.idioma, _mes)} $_anio',
               style: const TextStyle(color: AppTheme.textoSecundario),
             ),
             const SizedBox(height: 8),
@@ -288,7 +289,7 @@ class _AdminNominasScreenState extends State<AdminNominasScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_resumen.length} ${t.tr('nom_trabajadores_en')} ${AppConstants.meses[_mes]} $_anio',
+                  '${_resumen.length} ${t.tr('nom_trabajadores_en')} ${Traducciones.mes(t.idioma, _mes)} $_anio',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 2),

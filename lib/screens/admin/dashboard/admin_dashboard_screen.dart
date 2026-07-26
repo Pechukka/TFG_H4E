@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
-import '../../../core/constants.dart';
+import '../../../core/traducciones.dart';
 import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 
@@ -248,7 +248,8 @@ class _ProximosEventos extends StatelessWidget {
     final fecha = e['fecha'] as DateTime;
     final asignados = e['asignados'] as int? ?? 0;
     final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = AppConstants.meses[fecha.month];
+    final mes = Traducciones.mes(
+        context.watch<IdiomaProvider>().idioma, fecha.month);
     final hora =
         '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
 

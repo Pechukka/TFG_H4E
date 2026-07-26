@@ -956,4 +956,20 @@ class Traducciones {
   static String tr(String idioma, String clave) {
     return _t[idioma]?[clave] ?? _t['es']?[clave] ?? clave;
   }
+
+  // Nombre del mes según el idioma. El índice es 1-12 (igual que AppConstants.meses),
+  // así se puede sustituir AppConstants.meses[mes] por Traducciones.mes(idioma, mes).
+  static const List<String> _mesesEs = [
+    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+  static const List<String> _mesesEn = [
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  static String mes(String idioma, int indice) {
+    if (indice < 1 || indice > 12) return '';
+    return idioma == 'en' ? _mesesEn[indice] : _mesesEs[indice];
+  }
 }
