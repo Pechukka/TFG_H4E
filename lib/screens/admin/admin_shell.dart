@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/idioma_provider.dart';
 import 'widgets/admin_sidebar.dart';
 import 'dashboard/admin_dashboard_screen.dart';
 import 'workers/admin_workers_screen.dart';
@@ -31,34 +32,35 @@ class _AdminShellState extends State<AdminShell> {
     }
   }
 
-  String _sectionTitle() {
+  String _sectionTitle(IdiomaProvider t) {
     switch (_section) {
       case AdminSection.dashboard:
-        return 'Inicio';
+        return t.tr('admin_inicio');
       case AdminSection.workers:
-        return 'Trabajadores';
+        return t.tr('admin_trabajadores');
       case AdminSection.eventos:
-        return 'Eventos';
+        return t.tr('admin_eventos');
       case AdminSection.nominas:
-        return 'Nóminas';
+        return t.tr('admin_nominas');
     }
   }
 
   Future<void> _logout() async {
+    final t = context.read<IdiomaProvider>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.fondoCard,
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Seguro que quieres cerrar sesión?'),
+        title: Text(t.tr('cerrar_sesion')),
+        content: Text(t.tr('admin_logout_msg')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar', style: TextStyle(color: AppTheme.textoSecundario)),
+            child: Text(t.tr('cancelar'), style: const TextStyle(color: AppTheme.textoSecundario)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Cerrar sesión', style: TextStyle(color: AppTheme.verdeNeon)),
+            child: Text(t.tr('cerrar_sesion'), style: const TextStyle(color: AppTheme.verdeNeon)),
           ),
         ],
       ),
@@ -70,6 +72,7 @@ class _AdminShellState extends State<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       body: Row(
@@ -84,7 +87,7 @@ class _AdminShellState extends State<AdminShell> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _AdminTopBar(title: _sectionTitle()),
+                _AdminTopBar(title: _sectionTitle(t)),
                 Expanded(child: _buildContent()),
               ],
             ),

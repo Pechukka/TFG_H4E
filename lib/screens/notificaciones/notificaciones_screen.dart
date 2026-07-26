@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../models/notificacion.dart';
+import '../../providers/idioma_provider.dart';
 import '../../providers/notificaciones_provider.dart';
 import '../../widgets/app_bar_custom.dart';
 
@@ -42,6 +43,7 @@ class NotificacionesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<NotificacionesProvider>();
+    final t = context.watch<IdiomaProvider>();
     final lista = provider.notificaciones;
     final noLeidas = provider.noLeidas;
 
@@ -50,13 +52,13 @@ class NotificacionesScreen extends StatelessWidget {
       appBar: AppBarCustom(
         showLogo: true,
         showBackButton: true,
-        title: 'Notificaciones',
+        title: t.tr('feed_notificaciones'),
         actions: [
           if (noLeidas > 0)
             IconButton(
               icon: const Icon(Icons.done_all,
                   color: AppTheme.verdeNeon, size: 22),
-              tooltip: 'Marcar todas como leídas',
+              tooltip: t.tr('notif_marcar_todas'),
               onPressed: () {
                 for (final n in lista.where((n) => !n.leida)) {
                   provider.marcarLeida(n.id);
@@ -69,15 +71,15 @@ class NotificacionesScreen extends StatelessWidget {
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.verdeNeon))
           : lista.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.notifications_none,
+                      const Icon(Icons.notifications_none,
                           color: AppTheme.textoSecundario, size: 48),
-                      SizedBox(height: 16),
-                      Text('No tienes notificaciones',
-                          style: TextStyle(color: AppTheme.textoSecundario)),
+                      const SizedBox(height: 16),
+                      Text(t.tr('notif_vacio'),
+                          style: const TextStyle(color: AppTheme.textoSecundario)),
                     ],
                   ),
                 )

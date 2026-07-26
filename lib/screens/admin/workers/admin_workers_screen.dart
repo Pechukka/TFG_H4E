@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../utils/pdf_generator.dart';
 import '../../../utils/top_snackbar.dart';
@@ -24,6 +26,7 @@ class _AdminWorkersScreenState extends State<AdminWorkersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -32,14 +35,14 @@ class _AdminWorkersScreenState extends State<AdminWorkersScreen> {
           Row(
             children: [
               Text(
-                'Trabajadores',
+                t.tr('admin_trabajadores'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const Spacer(),
               FilledButton.icon(
                 onPressed: () => _mostrarCrearWorker(context),
                 icon: const Icon(Icons.person_add_outlined, size: 18),
-                label: const Text('Nuevo trabajador'),
+                label: Text(t.tr('w_nuevo')),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.verdeNeon,
                   foregroundColor: Colors.black,
@@ -67,8 +70,8 @@ class _AdminWorkersScreenState extends State<AdminWorkersScreen> {
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(
-                      'Error al cargar trabajadores',
-                      style: TextStyle(color: AppTheme.textoSecundario),
+                      t.tr('w_error_cargar'),
+                      style: const TextStyle(color: AppTheme.textoSecundario),
                     ),
                   );
                 }
@@ -134,7 +137,7 @@ class _BuscadorWorkers extends StatelessWidget {
         onChanged: onChanged,
         style: const TextStyle(color: AppTheme.textoBlanco, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Buscar por nombre…',
+          hintText: context.watch<IdiomaProvider>().tr('w_buscar'),
           hintStyle:
               const TextStyle(color: AppTheme.textoTerciario, fontSize: 14),
           prefixIcon: const Icon(Icons.search,
@@ -181,14 +184,15 @@ class _SinResultados extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off, color: AppTheme.textoSecundario, size: 44),
-          SizedBox(height: 12),
-          Text('Ningún trabajador coincide con la búsqueda',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          const Icon(Icons.search_off,
+              color: AppTheme.textoSecundario, size: 44),
+          const SizedBox(height: 12),
+          Text(context.watch<IdiomaProvider>().tr('w_sin_resultados'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
         ],
       ),
     );
@@ -205,6 +209,7 @@ class _TablaWorkers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.fondoCard,
@@ -220,10 +225,10 @@ class _TablaWorkers extends StatelessWidget {
             color: AppTheme.fondoPrincipal,
             child: Row(
               children: [
-                _cabecera('NOMBRE', flex: 3),
-                _cabecera('EMAIL', flex: 4),
-                _cabecera('TELÉFONO', flex: 2),
-                _cabecera('ESTADO', flex: 1),
+                _cabecera(t.tr('w_col_nombre'), flex: 3),
+                _cabecera(t.tr('w_col_email'), flex: 4),
+                _cabecera(t.tr('w_col_telefono'), flex: 2),
+                _cabecera(t.tr('w_col_estado'), flex: 1),
                 _cabecera('', flex: 1),
               ],
             ),
@@ -308,7 +313,7 @@ class _TablaWorkers extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              activo ? 'Activo' : 'Inactivo',
+                              activo ? t.tr('w_activo') : t.tr('w_inactivo'),
                               style: TextStyle(
                                 color: activo ? AppTheme.verdeNeon : AppTheme.textoTerciario,
                                 fontSize: 12,
@@ -334,8 +339,8 @@ class _TablaWorkers extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 6),
                             ),
-                            child: const Text('Gestionar',
-                                style: TextStyle(fontSize: 12)),
+                            child: Text(t.tr('w_gestionar'),
+                                style: const TextStyle(fontSize: 12)),
                           ),
                         ),
                       ),
@@ -376,21 +381,22 @@ class _SinWorkers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.people_outline, color: AppTheme.textoSecundario, size: 48),
           const SizedBox(height: 16),
-          const Text(
-            'Todavía no hay trabajadores',
-            style: TextStyle(color: AppTheme.textoSecundario),
+          Text(
+            t.tr('w_sin_workers'),
+            style: const TextStyle(color: AppTheme.textoSecundario),
           ),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: onCrear,
             icon: const Icon(Icons.person_add_outlined, color: AppTheme.verdeNeon),
-            label: const Text('Crear el primero', style: TextStyle(color: AppTheme.verdeNeon)),
+            label: Text(t.tr('w_crear_primero'), style: const TextStyle(color: AppTheme.verdeNeon)),
           ),
         ],
       ),
@@ -461,40 +467,41 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
       });
       if (!mounted) return;
       Navigator.pop(context);
-      showTopSnackBar(context, 'Datos actualizados correctamente',
+      showTopSnackBar(context, context.read<IdiomaProvider>().tr('w_datos_ok'),
           backgroundColor: AppTheme.verdeNeon, icon: Icons.check_circle_outline);
     } catch (e) {
       setState(() {
-        _errorMsg = 'Error al guardar. Inténtalo de nuevo.';
+        _errorMsg = context.read<IdiomaProvider>().tr('w_error_guardar');
         _isLoading = false;
       });
     }
   }
 
   Future<void> _confirmarEliminar() async {
+    final t = context.read<IdiomaProvider>();
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.fondoCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Eliminar trabajador',
-            style: TextStyle(color: AppTheme.textoBlanco)),
+        title: Text(t.tr('w_eliminar_titulo'),
+            style: const TextStyle(color: AppTheme.textoBlanco)),
         content: Text(
-          '¿Seguro que quieres eliminar a '
-          '${_nombreCtrl.text.trim()} ${_apellidosCtrl.text.trim()}? '
-          'Esta acción no se puede deshacer.',
+          '${t.tr('w_eliminar_pre')}'
+          '${_nombreCtrl.text.trim()} ${_apellidosCtrl.text.trim()}'
+          '${t.tr('w_eliminar_post')}',
           style: const TextStyle(color: AppTheme.textoSecundario),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.textoSecundario)),
+            child: Text(t.tr('cancelar'),
+                style: const TextStyle(color: AppTheme.textoSecundario)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('Eliminar'),
+            child: Text(t.tr('eliminar')),
           ),
         ],
       ),
@@ -507,11 +514,11 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
       await AdminService.eliminarWorker(widget.uid);
       if (!mounted) return;
       Navigator.pop(context);
-      showTopSnackBar(context, 'Trabajador eliminado',
+      showTopSnackBar(context, t.tr('w_eliminado'),
           backgroundColor: AppTheme.rojoError, icon: Icons.delete_outline);
     } catch (e) {
       setState(() {
-        _errorMsg = 'Error al eliminar. Inténtalo de nuevo.';
+        _errorMsg = t.tr('w_error_eliminar_op');
         _isLoading = false;
       });
     }
@@ -519,6 +526,7 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     final email = widget.datosActuales['email'] ?? '';
 
     return Dialog(
@@ -537,7 +545,7 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
                 // Cabecera
                 Row(
                   children: [
-                    Text('Gestionar trabajador',
+                    Text(t.tr('w_gestionar_titulo'),
                         style: Theme.of(context).textTheme.titleMedium),
                     const Spacer(),
                     IconButton(
@@ -558,29 +566,29 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
                 // Campos editables
                 Row(
                   children: [
-                    Expanded(child: _campo('Nombre *', _nombreCtrl, requerido: true)),
+                    Expanded(child: _campo(t.tr('w_nombre'), _nombreCtrl, requerido: true)),
                     const SizedBox(width: 12),
-                    Expanded(child: _campo('Apellidos', _apellidosCtrl)),
+                    Expanded(child: _campo(t.tr('w_apellidos'), _apellidosCtrl)),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _campo('Teléfono', _telefonoCtrl,
+                    Expanded(child: _campo(t.tr('w_telefono'), _telefonoCtrl,
                         keyboardType: TextInputType.phone,
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) return null;
                           if (!RegExp(r'^[6-9][0-9]{8}$').hasMatch(v.trim())) {
-                            return 'Formato: 6XXXXXXXX';
+                            return t.tr('w_formato_telefono');
                           }
                           return null;
                         })),
                     const SizedBox(width: 12),
-                    Expanded(child: _campo('DNI', _dniCtrl,
+                    Expanded(child: _campo(t.tr('w_dni'), _dniCtrl,
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) return null;
                           if (!RegExp(r'^[0-9]{8}[A-Z]$').hasMatch(v.trim().toUpperCase())) {
-                            return 'Formato: 12345678A';
+                            return t.tr('w_formato_dni');
                           }
                           return null;
                         })),
@@ -598,7 +606,7 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _activo ? 'Trabajador activo' : 'Trabajador inactivo',
+                      _activo ? t.tr('w_activo_toggle') : t.tr('w_inactivo_toggle'),
                       style: TextStyle(
                         color: _activo
                             ? AppTheme.verdeNeon
@@ -632,17 +640,17 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
                       onPressed: _isLoading ? null : _confirmarEliminar,
                       icon: const Icon(Icons.delete_outline,
                           color: Colors.redAccent, size: 16),
-                      label: const Text('Eliminar',
-                          style: TextStyle(
+                      label: Text(t.tr('eliminar'),
+                          style: const TextStyle(
                               color: Colors.redAccent, fontSize: 13)),
                     ),
                     const Spacer(),
                     TextButton(
                       onPressed:
                           _isLoading ? null : () => Navigator.pop(context),
-                      child: const Text('Cancelar',
-                          style:
-                              TextStyle(color: AppTheme.textoSecundario)),
+                      child: Text(t.tr('cancelar'),
+                          style: const TextStyle(
+                              color: AppTheme.textoSecundario)),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
@@ -658,7 +666,7 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.black),
                             )
-                          : const Text('Guardar cambios'),
+                          : Text(t.tr('w_guardar_cambios')),
                     ),
                   ],
                 ),
@@ -704,7 +712,9 @@ class _ModalGestionarWorkerState extends State<_ModalGestionarWorker> {
       ),
       validator: validator ??
           (requerido
-              ? (v) => (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null
+              ? (v) => (v == null || v.trim().isEmpty)
+                  ? context.read<IdiomaProvider>().tr('w_campo_obligatorio')
+                  : null
               : null),
     );
   }
@@ -787,10 +797,11 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
   }
 
   String _mensajeError(String raw) {
-    if (raw.contains('email-already-in-use')) return 'Ese email ya está registrado.';
-    if (raw.contains('invalid-email')) return 'El email no es válido.';
-    if (raw.contains('weak-password')) return 'La contraseña es demasiado débil.';
-    return 'Error al crear el trabajador. Inténtalo de nuevo.';
+    final t = context.read<IdiomaProvider>();
+    if (raw.contains('email-already-in-use')) return t.tr('w_err_email_uso');
+    if (raw.contains('invalid-email')) return t.tr('w_err_email_inv');
+    if (raw.contains('weak-password')) return t.tr('w_err_pass_debil');
+    return t.tr('w_err_crear');
   }
 
   @override
@@ -810,6 +821,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
   // ── Formulario de creación ──
 
   Widget _buildFormulario() {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Form(
@@ -820,7 +832,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
           children: [
             Row(
               children: [
-                Text('Nuevo trabajador',
+                Text(t.tr('w_nuevo'),
                     style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 IconButton(
@@ -834,33 +846,33 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: _campo('Nombre *', _nombreCtrl, requerido: true)),
+                Expanded(child: _campo(t.tr('w_nombre'), _nombreCtrl, requerido: true)),
                 const SizedBox(width: 12),
-                Expanded(child: _campo('Apellidos', _apellidosCtrl)),
+                Expanded(child: _campo(t.tr('w_apellidos'), _apellidosCtrl)),
               ],
             ),
             const SizedBox(height: 12),
-            _campo('Email *', _emailCtrl, requerido: true, keyboardType: TextInputType.emailAddress),
+            _campo(t.tr('w_email'), _emailCtrl, requerido: true, keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 12),
             _campoPassword(),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _campo('Teléfono', _telefonoCtrl,
+                Expanded(child: _campo(t.tr('w_telefono'), _telefonoCtrl,
                     keyboardType: TextInputType.phone,
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
                       if (!RegExp(r'^[6-9][0-9]{8}$').hasMatch(v.trim())) {
-                        return 'Formato: 6XXXXXXXX';
+                        return t.tr('w_formato_telefono');
                       }
                       return null;
                     })),
                 const SizedBox(width: 12),
-                Expanded(child: _campo('DNI', _dniCtrl,
+                Expanded(child: _campo(t.tr('w_dni'), _dniCtrl,
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
                       if (!RegExp(r'^[0-9]{8}[A-Z]$').hasMatch(v.trim().toUpperCase())) {
-                        return 'Formato: 12345678A';
+                        return t.tr('w_formato_dni');
                       }
                       return null;
                     })),
@@ -887,8 +899,8 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
               children: [
                 TextButton(
                   onPressed: _isLoading ? null : () => Navigator.pop(context),
-                  child: const Text('Cancelar',
-                      style: TextStyle(color: AppTheme.textoSecundario)),
+                  child: Text(t.tr('cancelar'),
+                      style: const TextStyle(color: AppTheme.textoSecundario)),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
@@ -903,7 +915,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
                           child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.black),
                         )
-                      : const Text('Crear trabajador'),
+                      : Text(t.tr('w_crear')),
                 ),
               ],
             ),
@@ -945,12 +957,15 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
       ),
       validator: validator ??
           (requerido
-              ? (v) => (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null
+              ? (v) => (v == null || v.trim().isEmpty)
+                  ? context.read<IdiomaProvider>().tr('w_campo_obligatorio')
+                  : null
               : null),
     );
   }
 
   Widget _campoPassword() {
+    final t = context.watch<IdiomaProvider>();
     return Row(
       children: [
         Expanded(
@@ -959,7 +974,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
             obscureText: !_verPassword,
             style: const TextStyle(color: AppTheme.textoBlanco, fontFamily: 'monospace'),
             decoration: InputDecoration(
-              labelText: 'Contraseña *',
+              labelText: t.tr('w_password'),
               labelStyle: const TextStyle(color: AppTheme.textoSecundario, fontSize: 13),
               filled: true,
               fillColor: AppTheme.fondoPrincipal,
@@ -985,15 +1000,16 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
               ),
             ),
             validator: (v) {
-              if (v == null || v.isEmpty) return 'Campo obligatorio';
-              if (v.length < 6) return 'Mínimo 6 caracteres';
+              final t = context.read<IdiomaProvider>();
+              if (v == null || v.isEmpty) return t.tr('w_campo_obligatorio');
+              if (v.length < 6) return t.tr('w_min_password');
               return null;
             },
           ),
         ),
         const SizedBox(width: 8),
         Tooltip(
-          message: 'Generar nueva contraseña',
+          message: t.tr('w_generar_password'),
           child: IconButton(
             onPressed: () => setState(() => _passwordCtrl.text = AdminService.generarPassword()),
             icon: const Icon(Icons.refresh, color: AppTheme.verdeNeon),
@@ -1010,6 +1026,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
   // ── Pantalla de éxito ──
 
   Widget _buildExito() {
+    final t = context.watch<IdiomaProvider>();
     final w = _workerCreado!;
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -1026,7 +1043,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Trabajador creado',
+            t.tr('w_creado'),
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
@@ -1046,9 +1063,9 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _datoCredencial('Email', w['email']!),
+                _datoCredencial(t.tr('w_email_label'), w['email']!),
                 const SizedBox(height: 8),
-                _datoCredencial('Contraseña', w['password']!),
+                _datoCredencial(t.tr('w_password_label'), w['password']!),
               ],
             ),
           ),
@@ -1063,7 +1080,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
                 password: w['password']!,
               ),
               icon: const Icon(Icons.download_outlined, size: 18),
-              label: const Text('Descargar ticket PDF'),
+              label: Text(t.tr('w_descargar_ticket')),
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.verdeNeon,
                 foregroundColor: Colors.black,
@@ -1075,7 +1092,7 @@ class _ModalCrearWorkerState extends State<_ModalCrearWorker> {
             width: double.infinity,
             child: TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar', style: TextStyle(color: AppTheme.textoSecundario)),
+              child: Text(t.tr('w_cerrar'), style: const TextStyle(color: AppTheme.textoSecundario)),
             ),
           ),
         ],

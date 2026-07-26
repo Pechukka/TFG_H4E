@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hands4events/core/theme.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../core/roles.dart';
 import 'admin_fichajes_evento_screen.dart';
@@ -46,6 +47,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
   }
 
   Widget _buildLista() {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -53,12 +55,13 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
         children: [
           Row(
             children: [
-              Text('Eventos', style: Theme.of(context).textTheme.headlineSmall),
+              Text(t.tr('admin_eventos'),
+                  style: Theme.of(context).textTheme.headlineSmall),
               const Spacer(),
               FilledButton.icon(
                 onPressed: () => setState(() => _mostrandoFormulario = true),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Nuevo evento'),
+                label: Text(t.tr('ev_nuevo')),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.verdeNeon,
                   foregroundColor: Colors.black,
@@ -85,9 +88,10 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                       );
                     }
                     if (snapshot.hasError) {
-                      return const Center(
-                        child: Text('Error al cargar eventos',
-                            style: TextStyle(color: AppTheme.textoSecundario)),
+                      return Center(
+                        child: Text(t.tr('ev_error_cargar'),
+                            style: const TextStyle(
+                                color: AppTheme.textoSecundario)),
                       );
                     }
 
@@ -165,17 +169,18 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
   }
 
   Widget _buildFiltros() {
+    final t = context.watch<IdiomaProvider>();
     return Row(
       children: [
-        _chipEstado('Todos', _FiltroEstado.todos),
+        _chipEstado(t.tr('ev_filtro_todos'), _FiltroEstado.todos),
         const SizedBox(width: 8),
-        _chipEstado('Borradores', _FiltroEstado.borrador),
+        _chipEstado(t.tr('ev_filtro_borradores'), _FiltroEstado.borrador),
         const SizedBox(width: 8),
-        _chipEstado('Publicados', _FiltroEstado.publicado),
+        _chipEstado(t.tr('ev_filtro_publicados'), _FiltroEstado.publicado),
         const SizedBox(width: 8),
-        _chipEstado('Activos', _FiltroEstado.activo),
+        _chipEstado(t.tr('ev_filtro_activos'), _FiltroEstado.activo),
         const SizedBox(width: 8),
-        _chipEstado('Finalizados', _FiltroEstado.finalizado),
+        _chipEstado(t.tr('ev_filtro_finalizados'), _FiltroEstado.finalizado),
         const Spacer(),
         // Filtro por fecha
         OutlinedButton.icon(
@@ -183,7 +188,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
           icon: const Icon(Icons.calendar_today, size: 15),
           label: Text(
             _fechaFiltro == null
-                ? 'Fecha'
+                ? t.tr('ev_fecha')
                 : '${_fechaFiltro!.day.toString().padLeft(2, '0')}/${_fechaFiltro!.month.toString().padLeft(2, '0')}/${_fechaFiltro!.year}',
           ),
           style: OutlinedButton.styleFrom(
@@ -203,7 +208,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
             onPressed: () => setState(() => _fechaFiltro = null),
             icon: const Icon(Icons.close,
                 color: AppTheme.textoTerciario, size: 18),
-            tooltip: 'Quitar filtro de fecha',
+            tooltip: t.tr('ev_quitar_fecha'),
           ),
       ],
     );
@@ -251,15 +256,15 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
   }
 
   Widget _buildSinResultados() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.filter_alt_off_outlined,
+          const Icon(Icons.filter_alt_off_outlined,
               color: AppTheme.textoSecundario, size: 44),
-          SizedBox(height: 12),
-          Text('Ningún evento coincide con los filtros',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          const SizedBox(height: 12),
+          Text(context.watch<IdiomaProvider>().tr('ev_sin_resultados'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
         ],
       ),
     );
@@ -267,8 +272,9 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
 
   Widget _buildCardEvento(
       QueryDocumentSnapshot<Map<String, dynamic>> doc, int pendientes) {
+    final t = context.watch<IdiomaProvider>();
     final data = doc.data();
-    final titulo = data['titulo'] ?? 'Sin título';
+    final titulo = data['titulo'] ?? t.tr('ev_sin_titulo');
     final ubicacion = data['ubicacion'] ?? '';
     final fechaInicio = (data['fechaInicio'] as Timestamp).toDate();
     final fechaFin = (data['fechaFin'] as Timestamp).toDate();
@@ -340,8 +346,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: AppTheme.verdeNeon),
                         ),
-                        child: const Text('EN CURSO',
-                            style: TextStyle(
+                        child: Text(t.tr('en_curso'),
+                            style: const TextStyle(
                                 color: AppTheme.verdeNeon,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold)),
@@ -377,8 +383,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 18),
               ),
-              const Text('confirmados',
-                  style: TextStyle(
+              Text(t.tr('ev_confirmados'),
+                  style: const TextStyle(
                       color: AppTheme.textoTerciario, fontSize: 10)),
             ],
           ),
@@ -386,7 +392,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
           if (pendientes > 0) ...[
             const SizedBox(width: 12),
             Tooltip(
-              message: 'Postulaciones pendientes de revisar',
+              message: t.tr('ev_pendientes_tooltip'),
               child: Column(
                 children: [
                   Text(
@@ -397,7 +403,9 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                         fontSize: 18),
                   ),
                   Text(
-                    pendientes == 1 ? 'pendiente' : 'pendientes',
+                    pendientes == 1
+                        ? t.tr('ev_pendiente')
+                        : t.tr('ev_pendientes'),
                     style: const TextStyle(
                         color: AppTheme.amarilloAdvertencia, fontSize: 10),
                   ),
@@ -419,14 +427,14 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                 ),
               ),
             ),
-            tooltip: 'Ver postulaciones',
+            tooltip: t.tr('ev_ver_postulaciones'),
           ),
           // Botón ver fichajes
           IconButton(
             icon: const Icon(Icons.fingerprint,
                 color: AppTheme.textoSecundario, size: 18),
             onPressed: () => _verFichajes(context, doc),
-            tooltip: 'Ver fichajes',
+            tooltip: t.tr('ev_ver_fichajes'),
           ),
           // Botón editar
           IconButton(
@@ -436,14 +444,14 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
               _eventoEditando = doc;
               _mostrandoFormulario = true;
             }),
-            tooltip: 'Editar evento',
+            tooltip: t.tr('ev_editar_tooltip'),
           ),
           // Botón eliminar
           IconButton(
             icon: const Icon(Icons.delete_outline,
                 color: Colors.redAccent, size: 18),
             onPressed: () => _confirmarEliminar(doc),
-            tooltip: 'Eliminar evento',
+            tooltip: t.tr('ev_eliminar_tooltip'),
           ),
         ],
       ),
@@ -457,22 +465,30 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     'activo': AppTheme.azulInfo,
     'finalizado': AppTheme.textoTerciario,
   };
-  static const Map<String, String> _labelsEstado = {
-    'borrador': 'Borrador',
-    'publicado': 'Publicado',
-    'activo': 'Activo',
-    'finalizado': 'Finalizado',
-  };
+  // Etiqueta traducida de cada estado (para la tarjeta, el menú y los snackbars).
+  String _estadoLabel(IdiomaProvider t, String estado) {
+    switch (estado) {
+      case 'borrador':
+        return t.tr('ev_estado_borrador');
+      case 'activo':
+        return t.tr('ev_estado_activo');
+      case 'finalizado':
+        return t.tr('ev_estado_finalizado');
+      default:
+        return t.tr('ev_estado_publicado');
+    }
+  }
 
   // Control para cambiar el estado del evento (borrador → publicado → finalizado).
-  // Muestra el estado actual como chip y abre un menú con los tres estados.
+  // Muestra el estado actual como chip y abre un menú con los estados.
   Widget _estadoControl(
       String eventoId, String estadoActual, Map<String, dynamic> data) {
+    final t = context.watch<IdiomaProvider>();
     final color = _coloresEstado[estadoActual] ?? AppTheme.verdeNeon;
-    final label = _labelsEstado[estadoActual] ?? 'Publicado';
+    final label = _estadoLabel(t, estadoActual);
 
     return PopupMenuButton<String>(
-      tooltip: 'Cambiar estado',
+      tooltip: t.tr('ev_cambiar_estado'),
       color: AppTheme.fondoCard,
       onSelected: (nuevo) => _cambiarEstado(eventoId, nuevo, estadoActual, data),
       itemBuilder: (_) =>
@@ -489,7 +505,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
                 decoration: BoxDecoration(color: c, shape: BoxShape.circle),
               ),
               const SizedBox(width: 10),
-              Text(_labelsEstado[e]!,
+              Text(_estadoLabel(t, e),
                   style: TextStyle(
                       color: activo ? c : AppTheme.textoBlanco,
                       fontSize: 13,
@@ -530,17 +546,18 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
       return;
     }
 
+    final t = context.read<IdiomaProvider>();
     try {
       await AdminService.actualizarEstadoEvento(eventoId, nuevo);
       if (mounted) {
         showTopSnackBar(
-            context, 'Evento marcado como ${_labelsEstado[nuevo] ?? nuevo}',
+            context, '${t.tr('ev_marcado_pre')}${_estadoLabel(t, nuevo)}',
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
       }
     } catch (_) {
       if (mounted) {
-        showTopSnackBar(context, 'No se pudo cambiar el estado',
+        showTopSnackBar(context, t.tr('ev_err_estado'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
     }
@@ -549,6 +566,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
   Future<void> _confirmarEliminar(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) async {
+    final t = context.read<IdiomaProvider>();
     final data = doc.data();
     final titulo = data['titulo'] as String? ?? 'este evento';
     final todos = List<String>.from(data['trabajadoresIds'] ?? []);
@@ -559,25 +577,25 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.fondoCard,
-        title: const Text('Eliminar evento',
-            style: TextStyle(color: AppTheme.textoBlanco)),
+        title: Text(t.tr('ev_eliminar_titulo'),
+            style: const TextStyle(color: AppTheme.textoBlanco)),
         content: Text(
-          '¿Seguro que quieres eliminar "$titulo"?\n\n'
-          'Se borrarán los mensajes del chat y se notificará a los trabajadores asignados.',
+          '${t.tr('ev_eliminado_pre')}$titulo${t.tr('ev_eliminado_post')}\n\n'
+          '${t.tr('ev_eliminar_msg')}',
           style: const TextStyle(color: AppTheme.textoSecundario),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.textoSecundario)),
+            child: Text(t.tr('cancelar'),
+                style: const TextStyle(color: AppTheme.textoSecundario)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white),
-            child: const Text('Eliminar'),
+            child: Text(t.tr('eliminar')),
           ),
         ],
       ),
@@ -592,7 +610,8 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
     );
 
     if (mounted) {
-      showTopSnackBar(context, 'Evento "$titulo" eliminado',
+      showTopSnackBar(
+          context, '${t.tr('ev_eliminado_pre')}$titulo${t.tr('ev_eliminado_post')}',
           backgroundColor: AppTheme.fondoCard, icon: Icons.delete_outline);
     }
   }
@@ -615,6 +634,7 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
   }
 
   Widget _buildSinEventos() {
+    final t = context.watch<IdiomaProvider>();
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -622,14 +642,14 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
           const Icon(Icons.event_outlined,
               color: AppTheme.textoSecundario, size: 48),
           const SizedBox(height: 16),
-          const Text('Todavía no hay eventos',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          Text(t.tr('ev_sin_eventos'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: () => setState(() => _mostrandoFormulario = true),
             icon: const Icon(Icons.add, color: AppTheme.verdeNeon),
-            label: const Text('Crear el primero',
-                style: TextStyle(color: AppTheme.verdeNeon)),
+            label: Text(t.tr('ev_crear_primero'),
+                style: const TextStyle(color: AppTheme.verdeNeon)),
           ),
         ],
       ),
@@ -765,6 +785,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
   }
 
   Future<void> _eliminarEvento() async {
+    final t = context.read<IdiomaProvider>();
     final data = widget.eventoExistente!.data();
     final titulo = data['titulo'] as String? ?? 'este evento';
     final todos = List<String>.from(data['trabajadoresIds'] ?? []);
@@ -775,25 +796,25 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.fondoCard,
-        title: const Text('Eliminar evento',
-            style: TextStyle(color: AppTheme.textoBlanco)),
+        title: Text(t.tr('ev_eliminar_titulo'),
+            style: const TextStyle(color: AppTheme.textoBlanco)),
         content: Text(
-          '¿Seguro que quieres eliminar "$titulo"?\n\n'
-          'Se borrarán los mensajes del chat y se notificará a los trabajadores asignados.',
+          '${t.tr('ev_eliminado_pre')}$titulo${t.tr('ev_eliminado_post')}\n\n'
+          '${t.tr('ev_eliminar_msg')}',
           style: const TextStyle(color: AppTheme.textoSecundario),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.textoSecundario)),
+            child: Text(t.tr('cancelar'),
+                style: const TextStyle(color: AppTheme.textoSecundario)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white),
-            child: const Text('Eliminar'),
+            child: Text(t.tr('eliminar')),
           ),
         ],
       ),
@@ -811,15 +832,16 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
   }
 
   Future<void> _guardar() async {
+    final t = context.read<IdiomaProvider>();
     if (!_formKey.currentState!.validate()) return;
     if (_fechaSeleccionada == null || _horaSeleccionada == null) {
-      setState(() => _errorMsg = 'Debes seleccionar fecha y hora.');
+      setState(() => _errorMsg = t.tr('ev_err_fecha_hora'));
       return;
     }
 
     final duracion = int.tryParse(_duracionCtrl.text.trim()) ?? 0;
     if (duracion <= 0) {
-      setState(() => _errorMsg = 'La duración debe ser mayor que 0.');
+      setState(() => _errorMsg = t.tr('ev_err_duracion'));
       return;
     }
 
@@ -838,7 +860,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
       if (n > 0) plazasPorRol[rol] = n;
     });
     if (plazasPorRol.isEmpty) {
-      setState(() => _errorMsg = 'Define al menos una plaza en algún rol.');
+      setState(() => _errorMsg = t.tr('ev_err_plaza'));
       return;
     }
 
@@ -857,8 +879,8 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
         final nuevaPlaza = plazasPorRol[entry.key] ?? 0;
         if (nuevaPlaza < entry.value) {
           setState(() => _errorMsg =
-              'No puedes dejar "${entry.key}" en $nuevaPlaza: ya tiene '
-              '${entry.value} confirmados. Sube las plazas o quita integrantes primero.');
+              '${t.tr('ev_guard_pre')}${entry.key}${t.tr('ev_guard_mid')}'
+              '${entry.value}${t.tr('ev_guard_post')}');
           return;
         }
       }
@@ -913,7 +935,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
       if (mounted) widget.onVolver();
     } catch (e) {
       setState(() {
-        _errorMsg = 'No se pudo guardar el evento. Inténtalo de nuevo.';
+        _errorMsg = t.tr('ev_err_guardar');
         _guardando = false;
       });
     }
@@ -921,6 +943,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -933,11 +956,11 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                 icon: const Icon(Icons.arrow_back,
                     color: AppTheme.textoBlanco, size: 20),
                 onPressed: widget.onVolver,
-                tooltip: 'Volver a la lista',
+                tooltip: t.tr('ev_volver'),
               ),
               const SizedBox(width: 8),
               Text(
-                _esEdicion ? 'Editar evento' : 'Nuevo evento',
+                _esEdicion ? t.tr('ev_editar_titulo') : t.tr('ev_nuevo'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               if (_esEdicion) ...[
@@ -946,8 +969,8 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                   onPressed: _guardando ? null : _eliminarEvento,
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 18),
-                  label: const Text('Eliminar evento',
-                      style: TextStyle(color: Colors.redAccent)),
+                  label: Text(t.tr('ev_eliminar_titulo'),
+                      style: const TextStyle(color: Colors.redAccent)),
                 ),
               ],
             ],
@@ -966,13 +989,13 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _seccion('Detalles del evento'),
+                          _seccion(t.tr('ev_sec_detalles')),
                           const SizedBox(height: 12),
-                          _campo('Nombre del evento *', _tituloCtrl, requerido: true),
+                          _campo(t.tr('ev_campo_nombre'), _tituloCtrl, requerido: true),
                           const SizedBox(height: 12),
-                          _campo('Descripción (opcional)', _descripcionCtrl, lineas: 2),
+                          _campo(t.tr('ev_campo_desc'), _descripcionCtrl, lineas: 2),
                           const SizedBox(height: 12),
-                          _campo('Ubicación *', _ubicacionCtrl, requerido: true),
+                          _campo(t.tr('ev_campo_ubicacion'), _ubicacionCtrl, requerido: true),
                           const SizedBox(height: 12),
                           // Fecha, hora y duración en una fila
                           Row(
@@ -983,7 +1006,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                               const SizedBox(width: 10),
                               SizedBox(
                                 width: 100,
-                                child: _campo('Duración (h) *', _duracionCtrl,
+                                child: _campo(t.tr('ev_campo_duracion'), _duracionCtrl,
                                     requerido: true,
                                     keyboardType: TextInputType.number),
                               ),
@@ -1011,8 +1034,8 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                               TextButton(
                                 onPressed:
                                     _guardando ? null : widget.onVolver,
-                                child: const Text('Cancelar',
-                                    style: TextStyle(
+                                child: Text(t.tr('cancelar'),
+                                    style: const TextStyle(
                                         color: AppTheme.textoSecundario)),
                               ),
                               const SizedBox(width: 8),
@@ -1026,8 +1049,9 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                                             strokeWidth: 2,
                                             color: Colors.black))
                                     : const Icon(Icons.check, size: 16),
-                                label: Text(
-                                    _esEdicion ? 'Guardar cambios' : 'Crear evento'),
+                                label: Text(_esEdicion
+                                    ? t.tr('w_guardar_cambios')
+                                    : t.tr('ev_crear_evento')),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppTheme.verdeNeon,
                                   foregroundColor: Colors.black,
@@ -1046,11 +1070,11 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _seccion('Plazas por rol'),
+                        _seccion(t.tr('ev_sec_plazas')),
                         const SizedBox(height: 4),
-                        const Text(
-                          '¿Cuántos trabajadores necesitas de cada rol?',
-                          style: TextStyle(
+                        Text(
+                          t.tr('ev_plazas_help'),
+                          style: const TextStyle(
                               color: AppTheme.textoTerciario, fontSize: 11),
                         ),
                         const SizedBox(height: 12),
@@ -1062,7 +1086,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
                                 for (final rol in RolesEvento.todos)
                                   _filaPlaza(rol),
                                 const SizedBox(height: 24),
-                                _seccion('Estado'),
+                                _seccion(t.tr('ev_sec_estado')),
                                 const SizedBox(height: 10),
                                 _selectorEstado(),
                               ],
@@ -1146,21 +1170,22 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
   }
 
   Widget _selectorEstado() {
+    final t = context.watch<IdiomaProvider>();
     return Row(
       children: [
-        _chipEstadoForm('Borrador', 'borrador'),
+        _chipEstadoForm(t, 'borrador'),
         const SizedBox(width: 8),
-        _chipEstadoForm('Publicado', 'publicado'),
+        _chipEstadoForm(t, 'publicado'),
         const SizedBox(width: 8),
-        _chipEstadoForm('Finalizado', 'finalizado'),
+        _chipEstadoForm(t, 'finalizado'),
       ],
     );
   }
 
-  Widget _chipEstadoForm(String label, String valor) {
+  Widget _chipEstadoForm(IdiomaProvider t, String valor) {
     final sel = _estado == valor;
     return ChoiceChip(
-      label: Text(label),
+      label: Text(t.tr('ev_estado_$valor')),
       selected: sel,
       onSelected: (_) => setState(() => _estado = valor),
       showCheckmark: false,
@@ -1224,14 +1249,16 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
       validator: requerido
-          ? (v) => (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null
+          ? (v) => (v == null || v.trim().isEmpty)
+              ? context.read<IdiomaProvider>().tr('w_campo_obligatorio')
+              : null
           : null,
     );
   }
 
   Widget _botonFecha() {
     final texto = _fechaSeleccionada == null
-        ? 'Fecha *'
+        ? context.read<IdiomaProvider>().tr('ev_fecha_req')
         : '${_fechaSeleccionada!.day.toString().padLeft(2, '0')}/'
             '${_fechaSeleccionada!.month.toString().padLeft(2, '0')}/'
             '${_fechaSeleccionada!.year}';
@@ -1258,7 +1285,7 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
 
   Widget _botonHora() {
     final texto = _horaSeleccionada == null
-        ? 'Hora *'
+        ? context.read<IdiomaProvider>().tr('ev_hora_req')
         : '${_horaSeleccionada!.hour.toString().padLeft(2, '0')}:'
             '${_horaSeleccionada!.minute.toString().padLeft(2, '0')}';
 

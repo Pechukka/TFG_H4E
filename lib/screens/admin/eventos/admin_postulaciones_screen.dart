@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../models/postulacion.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/postulaciones_service.dart';
@@ -56,6 +58,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       body: SafeArea(
@@ -71,14 +74,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                     icon: const Icon(Icons.arrow_back,
                         color: AppTheme.textoBlanco, size: 20),
                     onPressed: () => Navigator.pop(context),
-                    tooltip: 'Volver',
+                    tooltip: t.tr('pl_volver'),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Postulaciones',
+                        Text(t.tr('pl_titulo'),
                             style: Theme.of(context).textTheme.headlineSmall),
                         Text(widget.tituloEvento,
                             style: const TextStyle(
@@ -135,7 +138,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                                 onPressed: () => crearGrupoEvento(
                                     context, widget.eventoId, data),
                                 icon: const Icon(Icons.groups, size: 18),
-                                label: const Text('Crear grupo'),
+                                label: Text(t.tr('pl_crear_grupo')),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppTheme.verdeNeon,
                                   foregroundColor: Colors.black,
@@ -148,15 +151,15 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                           const SizedBox(height: 24),
                           Row(
                             children: [
-                              const _EtiquetaSeccion('CONFIRMADOS'),
+                              _EtiquetaSeccion(t.tr('pl_confirmados_sec')),
                               const Spacer(),
                               TextButton.icon(
                                 onPressed: () => _anadirIntegrante(
                                     plazas, confirmadosPorRol, roles),
                                 icon: const Icon(Icons.person_add_alt_1,
                                     size: 18, color: AppTheme.verdeNeon),
-                                label: const Text('Añadir integrante',
-                                    style: TextStyle(
+                                label: Text(t.tr('pl_anadir'),
+                                    style: const TextStyle(
                                         color: AppTheme.verdeNeon,
                                         fontSize: 13)),
                               ),
@@ -165,7 +168,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                           const SizedBox(height: 8),
                           _buildConfirmados(roles, creadoPor, data),
                           const SizedBox(height: 24),
-                          const _EtiquetaSeccion('PENDIENTES'),
+                          _EtiquetaSeccion(t.tr('pl_pendientes_sec')),
                           const SizedBox(height: 12),
                           _buildPendientes(plazas, confirmadosPorRol),
                         ],
@@ -186,6 +189,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
   //  finalizado  → chat en solo lectura (histórico)
   //  resto       → cerrado, botón deshabilitado con aviso
   Widget _buildAccesoChat(String estado) {
+    final t = context.watch<IdiomaProvider>();
     final abierto = estado == 'activo' || estado == 'finalizado';
     final soloLectura = estado == 'finalizado';
 
@@ -205,7 +209,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                     ),
                   ),
                 )
-            : () => showTopSnackBar(context, 'El grupo aún no está creado',
+            : () => showTopSnackBar(context, t.tr('grupo_aviso'),
                 backgroundColor: AppTheme.amarilloAdvertencia,
                 icon: Icons.info_outline),
         style: OutlinedButton.styleFrom(
@@ -230,9 +234,9 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
               child: Text(
                 abierto
                     ? (soloLectura
-                        ? 'Ver histórico del chat'
-                        : 'Abrir chat del grupo')
-                    : 'Chat no disponible (grupo no creado)',
+                        ? t.tr('pl_ver_historico')
+                        : t.tr('pl_abrir_chat'))
+                    : t.tr('pl_chat_no_disp'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -257,10 +261,10 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
             .toList();
 
         if (pendientes.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('No hay postulaciones pendientes',
-                style: TextStyle(color: AppTheme.textoSecundario)),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(context.watch<IdiomaProvider>().tr('pl_sin_pendientes'),
+                style: const TextStyle(color: AppTheme.textoSecundario)),
           );
         }
 
@@ -291,10 +295,10 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
   Widget _buildConfirmados(
       Map<String, String> roles, String? creadoPor, Map<String, dynamic> data) {
     if (roles.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text('Aún no hay nadie confirmado',
-            style: TextStyle(color: AppTheme.textoSecundario)),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(context.watch<IdiomaProvider>().tr('pl_sin_confirmados'),
+            style: const TextStyle(color: AppTheme.textoSecundario)),
       );
     }
     final info = (data['trabajadoresInfo'] as Map<String, dynamic>? ?? {});
@@ -307,7 +311,8 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         final nombre = (iInfo?['nombre'] as String?)?.trim();
         final mostrado = (nombre != null && nombre.isNotEmpty)
             ? nombre
-            : ((_workers[uid]?['nombre'] as String?) ?? 'Trabajador');
+            : ((_workers[uid]?['nombre'] as String?) ??
+                context.read<IdiomaProvider>().tr('pl_trabajador'));
         return _tarjetaConfirmado(uid, mostrado, esAdmin ? 'Admin' : rol,
             esAdmin: esAdmin);
       }).toList(),
@@ -360,7 +365,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 textStyle: const TextStyle(fontSize: 13),
               ),
-              child: const Text('Quitar'),
+              child: Text(context.read<IdiomaProvider>().tr('pl_quitar')),
             ),
         ],
       ),
@@ -368,27 +373,27 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
   }
 
   Future<void> _quitar(String uid, String nombre) async {
+    final t = context.read<IdiomaProvider>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.fondoCard,
-        title: const Text('Quitar integrante',
-            style: TextStyle(color: AppTheme.textoBlanco)),
+        title: Text(t.tr('pl_quitar_titulo'),
+            style: const TextStyle(color: AppTheme.textoBlanco)),
         content: Text(
-          '¿Quitar a $nombre del evento? Se liberará su plaza y su postulación '
-          'quedará descartada.',
+          '${t.tr('pl_quitar_pre')}$nombre${t.tr('pl_quitar_post')}',
           style: const TextStyle(color: AppTheme.textoSecundario),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.textoSecundario)),
+            child: Text(t.tr('cancelar'),
+                style: const TextStyle(color: AppTheme.textoSecundario)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppTheme.rojoError),
-            child: const Text('Quitar'),
+            child: Text(t.tr('pl_quitar')),
           ),
         ],
       ),
@@ -398,12 +403,12 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
       await PostulacionesService.quitarIntegrante(
           eventoId: widget.eventoId, trabajadorId: uid);
       if (mounted) {
-        showTopSnackBar(context, 'Integrante quitado',
+        showTopSnackBar(context, t.tr('pl_quitado'),
             backgroundColor: AppTheme.textoTerciario, icon: Icons.person_remove);
       }
     } catch (_) {
       if (mounted) {
-        showTopSnackBar(context, 'No se pudo quitar',
+        showTopSnackBar(context, t.tr('pl_err_quitar'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
     }
@@ -412,13 +417,13 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
   // Diálogo para añadir un worker (no confirmado aún) a un rol con plaza libre.
   Future<void> _anadirIntegrante(Map<String, int> plazas,
       Map<String, int> confirmadosPorRol, Map<String, String> roles) async {
+    final t = context.read<IdiomaProvider>();
     final rolesConHueco = plazas.entries
         .where((e) => (confirmadosPorRol[e.key] ?? 0) < e.value)
         .map((e) => e.key)
         .toList();
     if (rolesConHueco.isEmpty) {
-      showTopSnackBar(context,
-          'No hay plazas libres; edita el evento para añadir plazas',
+      showTopSnackBar(context, t.tr('pl_sin_plazas'),
           backgroundColor: AppTheme.amarilloAdvertencia,
           icon: Icons.info_outline);
       return;
@@ -433,7 +438,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
       ..sort((a, b) =>
           (a['nombre'] as String).compareTo(b['nombre'] as String));
     if (disponibles.isEmpty) {
-      showTopSnackBar(context, 'No hay más trabajadores para añadir',
+      showTopSnackBar(context, t.tr('pl_sin_workers'),
           backgroundColor: AppTheme.amarilloAdvertencia,
           icon: Icons.info_outline);
       return;
@@ -447,8 +452,8 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
           backgroundColor: AppTheme.fondoCard,
-          title: const Text('Añadir integrante',
-              style: TextStyle(color: AppTheme.textoBlanco)),
+          title: Text(t.tr('pl_anadir'),
+              style: const TextStyle(color: AppTheme.textoBlanco)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -458,7 +463,8 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                 dropdownColor: AppTheme.fondoCard,
                 style: const TextStyle(
                     color: AppTheme.textoBlanco, fontSize: 14),
-                decoration: const InputDecoration(labelText: 'Trabajador'),
+                decoration:
+                    InputDecoration(labelText: t.tr('pl_trabajador_label')),
                 items: disponibles
                     .map((w) => DropdownMenuItem(
                           value: w['uid'] as String,
@@ -476,7 +482,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                 style: const TextStyle(
                     color: AppTheme.textoBlanco, fontSize: 14),
                 decoration:
-                    const InputDecoration(labelText: 'Rol (con plaza libre)'),
+                    InputDecoration(labelText: t.tr('pl_rol_label')),
                 items: rolesConHueco
                     .map((r) => DropdownMenuItem(
                           value: r,
@@ -491,15 +497,15 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppTheme.textoSecundario)),
+              child: Text(t.tr('cancelar'),
+                  style: const TextStyle(color: AppTheme.textoSecundario)),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.verdeNeon,
                   foregroundColor: Colors.black),
-              child: const Text('Añadir'),
+              child: Text(t.tr('pl_anadir_btn')),
             ),
           ],
         ),
@@ -518,20 +524,19 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         telefono: telefono,
       );
       if (mounted) {
-        showTopSnackBar(context, 'Integrante añadido',
+        showTopSnackBar(context, t.tr('pl_anadido'),
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
       }
     } on RolCompletoException {
       if (mounted) {
-        showTopSnackBar(
-            context, 'Rol completo; edita el evento para añadir plazas',
+        showTopSnackBar(context, t.tr('pl_rol_completo'),
             backgroundColor: AppTheme.amarilloAdvertencia,
             icon: Icons.info_outline);
       }
     } catch (_) {
       if (mounted) {
-        showTopSnackBar(context, 'No se pudo añadir',
+        showTopSnackBar(context, t.tr('pl_err_anadir'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
     }
@@ -549,7 +554,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w600)),
         const SizedBox(width: 8),
-        Text('$c/$p confirmados',
+        Text('$c/$p ${context.watch<IdiomaProvider>().tr('pl_confirmados_conteo')}',
             style: const TextStyle(
                 color: AppTheme.textoTerciario, fontSize: 12)),
       ],
@@ -563,8 +568,9 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
   ) {
     final info = _workers[p.trabajadorId];
     final nombre = (info?['nombre'] as String?)?.trim();
-    final mostrado =
-        (nombre != null && nombre.isNotEmpty) ? nombre : 'Trabajador';
+    final mostrado = (nombre != null && nombre.isNotEmpty)
+        ? nombre
+        : context.watch<IdiomaProvider>().tr('pl_trabajador');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -603,7 +609,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               textStyle: const TextStyle(fontSize: 13),
             ),
-            child: const Text('Descartar'),
+            child: Text(context.watch<IdiomaProvider>().tr('pl_descartar')),
           ),
           const SizedBox(width: 8),
           // Confirmar
@@ -615,7 +621,7 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               textStyle: const TextStyle(fontSize: 13),
             ),
-            child: const Text('Confirmar'),
+            child: Text(context.watch<IdiomaProvider>().tr('pl_confirmar')),
           ),
         ],
       ),
@@ -627,14 +633,14 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
     Map<String, int> plazas,
     Map<String, int> confirmadosPorRol,
   ) async {
+    final t = context.read<IdiomaProvider>();
     final c = confirmadosPorRol[p.rol] ?? 0;
     final plaza = plazas[p.rol] ?? 0;
 
     // CUPO DURO (Fase 5): no se puede confirmar a un rol lleno. Para meter uno más,
     // hay que editar el evento y subir las plazas de ese rol.
     if (c >= plaza) {
-      showTopSnackBar(
-          context, 'Rol completo; edita el evento para añadir plazas',
+      showTopSnackBar(context, t.tr('pl_rol_completo'),
           backgroundColor: AppTheme.amarilloAdvertencia,
           icon: Icons.info_outline);
       return;
@@ -652,36 +658,36 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
         tituloEvento: widget.tituloEvento,
       );
       if (mounted) {
-        showTopSnackBar(context, 'Trabajador confirmado',
+        showTopSnackBar(context, t.tr('pl_confirmado_ok'),
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
       }
     } on RolCompletoException {
       // Salvaguarda ante carreras: el rol se llenó entre la comprobación y el commit.
       if (mounted) {
-        showTopSnackBar(
-            context, 'Rol completo; edita el evento para añadir plazas',
+        showTopSnackBar(context, t.tr('pl_rol_completo'),
             backgroundColor: AppTheme.amarilloAdvertencia,
             icon: Icons.info_outline);
       }
     } catch (_) {
       if (mounted) {
-        showTopSnackBar(context, 'No se pudo confirmar',
+        showTopSnackBar(context, t.tr('pl_err_confirmar'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
     }
   }
 
   Future<void> _descartar(Postulacion p) async {
+    final t = context.read<IdiomaProvider>();
     try {
       await PostulacionesService.descartar(p.id);
       if (mounted) {
-        showTopSnackBar(context, 'Postulación descartada',
+        showTopSnackBar(context, t.tr('pl_descartada'),
             backgroundColor: AppTheme.textoTerciario, icon: Icons.close);
       }
     } catch (_) {
       if (mounted) {
-        showTopSnackBar(context, 'No se pudo descartar',
+        showTopSnackBar(context, t.tr('pl_err_descartar'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
     }
@@ -717,8 +723,8 @@ class _Cobertura extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (plazas.isEmpty) {
-      return const Text('Este evento no define plazas por rol.',
-          style: TextStyle(color: AppTheme.textoSecundario, fontSize: 13));
+      return Text(context.watch<IdiomaProvider>().tr('pl_sin_plazas_evento'),
+          style: const TextStyle(color: AppTheme.textoSecundario, fontSize: 13));
     }
     return Wrap(
       spacing: 10,

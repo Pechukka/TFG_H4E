@@ -205,7 +205,7 @@ class _NominasScreenState extends State<NominasScreen> {
             ),
             child: IconButton(
               icon: const Icon(Icons.download, color: AppTheme.textoSobreVerde, size: 20),
-              tooltip: 'Descargar PDF',
+              tooltip: t.tr('descargar_pdf'),
               onPressed: () async {
                 final nombre = context.read<AuthProvider>().currentUser?.nombre ?? '';
                 await PdfGenerator.descargarNominaWorker(

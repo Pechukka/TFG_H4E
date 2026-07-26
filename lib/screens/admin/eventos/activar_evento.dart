@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../utils/top_snackbar.dart';
 
@@ -32,34 +34,34 @@ Map<String, int> faltantesPorRol(Map<String, dynamic> data) {
 // Se puede activar aunque falten plazas: el admin decide. Devuelve true si se activó.
 Future<bool> crearGrupoEvento(
     BuildContext context, String eventoId, Map<String, dynamic> data) async {
+  final t = context.read<IdiomaProvider>();
   final faltan = faltantesPorRol(data);
   final contenido = faltan.isEmpty
-      ? 'El equipo está completo. Se creará el grupo y el evento pasará a activo '
-          '(sale del feed y se abre el chat).'
-      : 'Aún faltan plazas por cubrir:\n\n'
-          '${faltan.entries.map((e) => '· ${e.key}: faltan ${e.value}').join('\n')}'
-          '\n\n¿Crear el grupo igualmente? El evento saldrá del feed.';
+      ? t.tr('pl_activar_completo')
+      : '${t.tr('pl_activar_faltan')}\n\n'
+          '${faltan.entries.map((e) => '· ${e.key}: ${t.tr('pl_faltan')} ${e.value}').join('\n')}'
+          '\n\n${t.tr('pl_activar_pregunta')}';
 
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: AppTheme.fondoCard,
-      title: const Text('Crear grupo',
-          style: TextStyle(color: AppTheme.textoBlanco)),
+      title: Text(t.tr('pl_crear_grupo'),
+          style: const TextStyle(color: AppTheme.textoBlanco)),
       content:
           Text(contenido, style: const TextStyle(color: AppTheme.textoSecundario)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancelar',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          child: Text(t.tr('cancelar'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, true),
           style: FilledButton.styleFrom(
               backgroundColor: AppTheme.verdeNeon,
               foregroundColor: Colors.black),
-          child: const Text('Crear grupo'),
+          child: Text(t.tr('pl_crear_grupo')),
         ),
       ],
     ),
@@ -69,14 +71,14 @@ Future<bool> crearGrupoEvento(
   try {
     await AdminService.actualizarEstadoEvento(eventoId, 'activo');
     if (context.mounted) {
-      showTopSnackBar(context, 'Grupo creado: evento activo',
+      showTopSnackBar(context, t.tr('pl_grupo_creado'),
           backgroundColor: AppTheme.verdeNeon,
           icon: Icons.check_circle_outline);
     }
     return true;
   } catch (_) {
     if (context.mounted) {
-      showTopSnackBar(context, 'No se pudo crear el grupo',
+      showTopSnackBar(context, t.tr('pl_err_crear_grupo'),
           backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
     }
     return false;

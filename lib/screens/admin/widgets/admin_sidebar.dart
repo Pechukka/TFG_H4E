@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../../providers/idioma_provider.dart';
 
 enum AdminSection { dashboard, workers, eventos, nominas }
 
@@ -17,6 +19,7 @@ class AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<IdiomaProvider>();
     return Container(
       width: 220,
       color: AppTheme.fondoCard,
@@ -36,7 +39,7 @@ class AdminSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Panel Admin',
+              t.tr('admin_panel'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textoSecundario,
                   ),
@@ -47,25 +50,25 @@ class AdminSidebar extends StatelessWidget {
           const SizedBox(height: 12),
           _SidebarItem(
             icon: Icons.dashboard_outlined,
-            label: 'Inicio',
+            label: t.tr('admin_inicio'),
             selected: selected == AdminSection.dashboard,
             onTap: () => onSelect(AdminSection.dashboard),
           ),
           _SidebarItem(
             icon: Icons.people_outline,
-            label: 'Trabajadores',
+            label: t.tr('admin_trabajadores'),
             selected: selected == AdminSection.workers,
             onTap: () => onSelect(AdminSection.workers),
           ),
           _SidebarItem(
             icon: Icons.event_outlined,
-            label: 'Eventos',
+            label: t.tr('admin_eventos'),
             selected: selected == AdminSection.eventos,
             onTap: () => onSelect(AdminSection.eventos),
           ),
           _SidebarItem(
             icon: Icons.description_outlined,
-            label: 'Nóminas',
+            label: t.tr('admin_nominas'),
             selected: selected == AdminSection.nominas,
             onTap: () => onSelect(AdminSection.nominas),
           ),
@@ -73,7 +76,7 @@ class AdminSidebar extends StatelessWidget {
           const Divider(color: AppTheme.bordeCard, height: 1),
           _SidebarItem(
             icon: Icons.logout,
-            label: 'Cerrar sesión',
+            label: t.tr('cerrar_sesion'),
             selected: false,
             onTap: onLogout,
             textColor: AppTheme.textoSecundario,
