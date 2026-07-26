@@ -833,6 +833,7 @@ class Traducciones {
       'ev_quitar_fecha': 'Clear date filter',
       'ev_ver_postulaciones': 'View applications',
       'ev_ver_fichajes': 'View clock-ins',
+      'ev_sin_titulo': 'Untitled',
       // ── Admin panel: applications / team management ──
       'pl_volver': 'Back',
       'pl_titulo': 'Applications',
