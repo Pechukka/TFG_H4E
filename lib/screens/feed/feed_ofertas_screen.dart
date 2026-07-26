@@ -6,6 +6,7 @@ import '../../core/roles.dart';
 import '../../models/evento.dart';
 import '../../models/postulacion.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/idioma_provider.dart';
 import '../../providers/notificaciones_provider.dart';
 import '../../services/eventos_service.dart';
 import '../../services/postulaciones_service.dart';
@@ -85,6 +86,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
       {required String rol, required String estado}) async {
     setState(() => _cartas.removeWhere((c) => c.id == e.id));
     final uid = context.read<AuthProvider>().currentUserId ?? '';
+    final t = context.read<IdiomaProvider>();
     try {
       await PostulacionesService.responder(
         eventoId: e.id,
@@ -93,7 +95,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
         estado: estado,
       );
       if (mounted && estado == Postulacion.pendiente) {
-        showTopSnackBar(context, 'Te has postulado a "${e.titulo}"',
+        showTopSnackBar(context, '${t.tr('feed_postulado_pre')}"${e.titulo}"',
             backgroundColor: AppTheme.verdeNeon,
             icon: Icons.check_circle_outline);
       }
@@ -101,7 +103,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
       // Si falla, devolvemos la carta a la pila y avisamos.
       if (mounted) {
         setState(() => _cartas.insert(0, e));
-        showTopSnackBar(context, 'No se pudo registrar. Inténtalo de nuevo.',
+        showTopSnackBar(context, t.tr('feed_error_registrar'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
     }
@@ -123,12 +125,13 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
 
     if (opciones.length == 1) return opciones.first;
 
+    final t = context.read<IdiomaProvider>();
     return showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
         backgroundColor: AppTheme.fondoCard,
-        title: const Text('¿Para qué puesto?',
-            style: TextStyle(color: AppTheme.textoBlanco, fontSize: 16)),
+        title: Text(t.tr('feed_para_puesto'),
+            style: const TextStyle(color: AppTheme.textoBlanco, fontSize: 16)),
         children: opciones.map((rol) {
           final n = libres[rol] ?? 0;
           return SimpleDialogOption(
@@ -141,7 +144,9 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
                           color: AppTheme.textoBlanco, fontSize: 14)),
                 ),
                 Text(
-                  n > 0 ? '$n libre${n == 1 ? '' : 's'}' : 'sin hueco',
+                  n > 0
+                      ? '$n ${n == 1 ? t.tr('feed_libre') : t.tr('feed_libres')}'
+                      : t.tr('feed_sin_hueco'),
                   style: TextStyle(
                       color:
                           n > 0 ? AppTheme.verdeNeon : AppTheme.textoTerciario,
@@ -165,12 +170,13 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   @override
   Widget build(BuildContext context) {
     final noLeidas = context.watch<NotificacionesProvider>().noLeidas;
+    final t = context.watch<IdiomaProvider>();
 
     return Scaffold(
       backgroundColor: AppTheme.fondoPrincipal,
       appBar: AppBarCustom(
         showLogo: true,
-        title: 'Ofertas',
+        title: t.tr('feed_ofertas'),
         actions: [
           // Campanita con el nº de notificaciones sin leer
           IconButton(
@@ -183,7 +189,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
               child: const Icon(Icons.notifications_none,
                   color: AppTheme.textoBlanco, size: 22),
             ),
-            tooltip: 'Notificaciones',
+            tooltip: t.tr('feed_notificaciones'),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
@@ -192,7 +198,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
           IconButton(
             icon: const Icon(Icons.assignment_outlined,
                 color: AppTheme.textoBlanco, size: 22),
-            tooltip: 'Mis postulaciones',
+            tooltip: t.tr('feed_mis_postulaciones'),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -211,23 +217,24 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   }
 
   Widget _buildVacio() {
+    final t = context.watch<IdiomaProvider>();
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.done_all, color: AppTheme.textoSecundario, size: 52),
           const SizedBox(height: 16),
-          const Text('No hay ofertas nuevas por ahora',
-              style: TextStyle(color: AppTheme.textoSecundario)),
+          Text(t.tr('feed_vacio1'),
+              style: const TextStyle(color: AppTheme.textoSecundario)),
           const SizedBox(height: 6),
-          const Text('Vuelve más tarde o actualiza',
-              style: TextStyle(color: AppTheme.textoTerciario, fontSize: 12)),
+          Text(t.tr('feed_vacio2'),
+              style: const TextStyle(color: AppTheme.textoTerciario, fontSize: 12)),
           const SizedBox(height: 16),
           TextButton.icon(
             onPressed: _cargar,
             icon: const Icon(Icons.refresh, color: AppTheme.verdeNeon),
-            label: const Text('Actualizar',
-                style: TextStyle(color: AppTheme.verdeNeon)),
+            label: Text(t.tr('feed_actualizar'),
+                style: const TextStyle(color: AppTheme.verdeNeon)),
           ),
         ],
       ),
@@ -257,6 +264,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   }
 
   Widget _buildCarta(int i) {
+    final t = context.watch<IdiomaProvider>();
     final e = _cartas[i];
     // Cartas de fondo: algo más pequeñas y desplazadas hacia arriba.
     if (i > 0) {
@@ -291,10 +299,10 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
           _responder(e, rol: '', estado: Postulacion.rechazadoPorWorker);
         }
       },
-      background: _overlaySwipe(
-          Alignment.centerLeft, 'POSTULARME', AppTheme.verdeNeon, Icons.check),
-      secondaryBackground: _overlaySwipe(
-          Alignment.centerRight, 'RECHAZAR', AppTheme.rojoError, Icons.close),
+      background: _overlaySwipe(Alignment.centerLeft, t.tr('feed_postularme'),
+          AppTheme.verdeNeon, Icons.check),
+      secondaryBackground: _overlaySwipe(Alignment.centerRight,
+          t.tr('feed_rechazar'), AppTheme.rojoError, Icons.close),
       child: _contenidoCarta(e),
     );
   }
@@ -323,6 +331,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   }
 
   Widget _contenidoCarta(Evento e) {
+    final t = context.watch<IdiomaProvider>();
     final libres = _libresPorRol(e);
     final fecha =
         '${e.fechaInicio.day.toString().padLeft(2, '0')}/${e.fechaInicio.month.toString().padLeft(2, '0')}/${e.fechaInicio.year}';
@@ -363,8 +372,8 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
                         height: 1.4)),
               ],
               const SizedBox(height: 20),
-              const Text('PLAZAS LIBRES',
-                  style: TextStyle(
+              Text(t.tr('feed_plazas_libres'),
+                  style: const TextStyle(
                       color: AppTheme.textoTerciario,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -395,7 +404,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
                                 color: AppTheme.textoBlanco, fontSize: 13)),
                         const SizedBox(height: 2),
                         Text(
-                          '${n > 0 ? '$n libre${n == 1 ? '' : 's'}' : 'completo'} · ${tarifa.toStringAsFixed(1)} €/h',
+                          '${n > 0 ? '$n ${n == 1 ? t.tr('feed_libre') : t.tr('feed_libres')}' : t.tr('feed_completo')} · ${tarifa.toStringAsFixed(1)} €/h',
                           style: TextStyle(
                               color: n > 0
                                   ? AppTheme.verdeNeon
