@@ -23,12 +23,19 @@ class EventosService {
   // Fase 2 — feed del worker: eventos publicados y futuros.
   // where('estado') es un filtro de campo único (no requiere índice compuesto);
   // la fecha futura se filtra en Dart, según el patrón del proyecto.
-  Future<List<Evento>> getEventosPublicados() async {
-    final snapshot = await _firestore
+  // Feed del worker en tiempo real: el stream re-emite cuando el admin crea/publica
+  // (o despublica) un evento, así el feed se refresca solo sin recargar a mano.
+  // Filtro de campo único (sin índice compuesto); la fecha futura se filtra en Dart.
+  Stream<List<Evento>> getEventosPublicadosStream() {
+    return _firestore
         .collection(AppConstants.colEventos)
         .where('estado', isEqualTo: 'publicado')
-        .get();
+        .snapshots()
+        .map(_procesarPublicados);
+  }
 
+  // Convierte el snapshot en la lista de eventos publicados y futuros, ordenada.
+  List<Evento> _procesarPublicados(QuerySnapshot<Map<String, dynamic>> snapshot) {
     final ahora = DateTime.now();
     final eventos = snapshot.docs
         .map((doc) => Evento.fromFirestore(doc))

@@ -402,17 +402,31 @@ class AdminService {
       }
     }
 
-    // 2. Borrar mensajes de chat (Firestore no hace cascade delete)
+    // 2. Borrar mensajes de chat (Firestore no hace cascade delete).
+    //    El chat NO es una subcolección del evento: vive en la colección top-level
+    //    'mensajes' con un campo `eventoId` (ver ChatService). Hay que consultarla así;
+    //    leer eventos/{id}/mensajes apuntaba a un path vacío que, además, las reglas
+    //    de Firestore bloquean → la eliminación fallaba antes de borrar el evento.
     final mensajes = await _firestore
-        .collection('eventos')
-        .doc(eventoId)
-        .collection('mensajes')
+        .collection(AppConstants.colMensajes)
+        .where('eventoId', isEqualTo: eventoId)
         .get();
     for (final doc in mensajes.docs) {
       await doc.reference.delete();
     }
 
-    // 3. Notificar cancelación a los trabajadores asignados
+    // 3. Borrar la subcolección `equipo` (fichas con teléfono) para no dejar datos
+    //    huérfanos al eliminar el evento.
+    final equipo = await _firestore
+        .collection('eventos')
+        .doc(eventoId)
+        .collection(AppConstants.subColEquipo)
+        .get();
+    for (final doc in equipo.docs) {
+      await doc.reference.delete();
+    }
+
+    // 4. Notificar cancelación a los trabajadores asignados
     for (final uid in trabajadoresIds) {
       await _notificar(
         uid,
@@ -423,7 +437,7 @@ class AdminService {
       );
     }
 
-    // 4. Eliminar el documento del evento
+    // 5. Eliminar el documento del evento
     await _firestore.collection('eventos').doc(eventoId).delete();
   }
 
@@ -508,6 +522,38 @@ class AdminService {
     });
 
     await batch.commit();
+
+    // Si el evento nace publicado, avisar a todos los workers activos de la nueva
+    // oferta (aparece sola en su feed gracias al stream, y además reciben notificación).
+    // Va después del commit y es no-crítico: si una notificación falla, el evento ya
+    // está creado y no debe reportarse como error de guardado.
+    if (estado == 'publicado') {
+      try {
+        await _notificarNuevoEvento(ref.id, titulo, adminUid);
+      } catch (_) {
+        // Silencioso a propósito: la creación del evento ya fue correcta.
+      }
+    }
+  }
+
+  // Notifica a todos los workers activos (menos el admin creador) de una oferta nueva.
+  static Future<void> _notificarNuevoEvento(
+      String eventoId, String titulo, String adminUid) async {
+    final workersSnap = await _firestore
+        .collection('users')
+        .where('rol', isEqualTo: 'worker')
+        .get();
+    for (final doc in workersSnap.docs) {
+      if (doc.id == adminUid) continue;
+      if (doc.data()['activo'] == false) continue; // no molestar a los dados de baja
+      await _notificar(
+        doc.id,
+        tipo: TipoNotificacion.nuevoEvento,
+        titulo: 'Nueva oferta disponible',
+        mensaje: titulo,
+        datos: {'eventoId': eventoId, 'tituloEvento': titulo},
+      );
+    }
   }
 
   // ─── FASE 1: Datos del dashboard admin ──────────────────────────────────────

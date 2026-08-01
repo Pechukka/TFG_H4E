@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -31,38 +32,72 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   // Rol elegido en confirmDismiss para usarlo en onDismissed (swipe derecha).
   String? _rolPendiente;
 
+  String _uid = '';
+  // Ids de eventos que el worker ya respondió (los del servidor + los que va
+  // deslizando en la sesión). Evita que el feed en tiempo real vuelva a mostrar
+  // una carta ya vista cuando el stream re-emite.
+  final Set<String> _respondidos = {};
+  StreamSubscription<List<Evento>>? _sub;
+
   @override
   void initState() {
     super.initState();
-    _cargar();
+    _iniciar();
   }
 
-  Future<void> _cargar() async {
-    setState(() => _cargando = true);
-    final uid = context.read<AuthProvider>().currentUserId ?? '';
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
 
-    // La campanita necesita el stream de notificaciones (el provider ignora
-    // llamadas repetidas, así que es seguro pedirlo también desde aquí).
-    if (uid.isNotEmpty) {
-      context.read<NotificacionesProvider>().cargarNotificaciones(uid);
+  Future<void> _iniciar() async {
+    _uid = context.read<AuthProvider>().currentUserId ?? '';
+
+    if (_uid.isNotEmpty) {
+      // La campanita necesita el stream de notificaciones (el provider ignora
+      // llamadas repetidas, así que es seguro pedirlo también desde aquí).
+      context.read<NotificacionesProvider>().cargarNotificaciones(_uid);
+      final misPost = await PostulacionesService.misPostulaciones(_uid);
+      _respondidos.addAll(misPost.map((p) => p.eventoId));
     }
 
-    final eventos = await _eventosService.getEventosPublicados();
-    final misPost = await PostulacionesService.misPostulaciones(uid);
-    final respondidos = misPost.map((p) => p.eventoId).toSet();
-
-    // Se muestran los publicados/futuros que el worker NO haya respondido ya
-    // y en los que no sea ya confirmado. (Cruce en Dart, sin índices compuestos.)
-    final cartas = eventos
-        .where((e) =>
-            !respondidos.contains(e.id) && !e.trabajadoresIds.contains(uid))
-        .toList();
-
     if (!mounted) return;
+    // Feed en tiempo real: cuando el admin crea/publica (o despublica) un evento,
+    // el stream re-emite y la pila se actualiza sola, sin recargar a mano.
+    _sub = _eventosService.getEventosPublicadosStream().listen(_aplicarEventos);
+  }
+
+  // Fusiona los eventos publicados actuales con la pila: añade las ofertas nuevas que
+  // el worker no haya respondido ni tenga confirmadas, y quita las que dejaron de estar
+  // disponibles (despublicadas, borradas o ya confirmado). No reordena las visibles.
+  void _aplicarEventos(List<Evento> eventos) {
+    if (!mounted) return;
+    final elegibles = eventos
+        .where((e) =>
+            !_respondidos.contains(e.id) && !e.trabajadoresIds.contains(_uid))
+        .toList();
+    final idsElegibles = elegibles.map((e) => e.id).toSet();
+    final idsActuales = _cartas.map((c) => c.id).toSet();
+
     setState(() {
-      _cartas = cartas;
+      _cartas.removeWhere((c) => !idsElegibles.contains(c.id));
+      for (final e in elegibles) {
+        if (!idsActuales.contains(e.id)) _cartas.add(e);
+      }
       _cargando = false;
     });
+  }
+
+  // Refresco manual (botón de la pantalla vacía): recarga desde cero.
+  Future<void> _recargar() async {
+    await _sub?.cancel();
+    _respondidos.clear();
+    setState(() {
+      _cargando = true;
+      _cartas = [];
+    });
+    await _iniciar();
   }
 
   // Plazas libres por rol = plazas objetivo - confirmados de ese rol (sin el admin).
@@ -84,13 +119,15 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
   // Quita la carta de la pila y registra la respuesta del worker.
   Future<void> _responder(Evento e,
       {required String rol, required String estado}) async {
-    setState(() => _cartas.removeWhere((c) => c.id == e.id));
-    final uid = context.read<AuthProvider>().currentUserId ?? '';
+    setState(() {
+      _cartas.removeWhere((c) => c.id == e.id);
+      _respondidos.add(e.id); // no re-mostrarla aunque el stream re-emita
+    });
     final t = context.read<IdiomaProvider>();
     try {
       await PostulacionesService.responder(
         eventoId: e.id,
-        trabajadorId: uid,
+        trabajadorId: _uid,
         rol: rol,
         estado: estado,
       );
@@ -102,7 +139,10 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
     } catch (_) {
       // Si falla, devolvemos la carta a la pila y avisamos.
       if (mounted) {
-        setState(() => _cartas.insert(0, e));
+        setState(() {
+          _respondidos.remove(e.id);
+          _cartas.insert(0, e);
+        });
         showTopSnackBar(context, t.tr('feed_error_registrar'),
             backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
       }
@@ -231,7 +271,7 @@ class _FeedOfertasScreenState extends State<FeedOfertasScreen> {
               style: const TextStyle(color: AppTheme.textoTerciario, fontSize: 12)),
           const SizedBox(height: 16),
           TextButton.icon(
-            onPressed: _cargar,
+            onPressed: _recargar,
             icon: const Icon(Icons.refresh, color: AppTheme.verdeNeon),
             label: Text(t.tr('feed_actualizar'),
                 style: const TextStyle(color: AppTheme.verdeNeon)),
