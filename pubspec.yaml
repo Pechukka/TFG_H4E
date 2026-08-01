@@ -50,6 +50,11 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.6
 
+  # Notificaciones locales: muestra el heads-up del sistema (estilo WhatsApp) cuando
+  # llega un push con la app en primer plano (FCM no lo hace solo en ese caso).
+  # Requiere core library desugaring en android/app/build.gradle.kts.
+  flutter_local_notifications: ^22.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

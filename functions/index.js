@@ -90,14 +90,16 @@ exports.onNotificacionCreada = functions.firestore
   });
 
 // Crea una notificación en Firestore para cada miembro del evento
-// cuando alguien envía un mensaje al chat (excepto el propio autor)
+// cuando alguien envía un mensaje al chat (excepto el propio autor).
+// El chat NO es una subcolección: vive en la colección top-level 'mensajes',
+// con los campos `eventoId` y `remitenteId` (ver lib/models/mensaje.dart).
 exports.onMensajeCreado = functions.firestore
-  .document('eventos/{eventoId}/mensajes/{mensajeId}')
-  .onCreate(async (snap, context) => {
+  .document('mensajes/{mensajeId}')
+  .onCreate(async (snap) => {
     const mensaje = snap.data();
-    const eventoId = context.params.eventoId;
-    const autorId = mensaje.autorId;
-    if (!autorId) return null;
+    const eventoId = mensaje.eventoId;
+    const autorId = mensaje.remitenteId;
+    if (!autorId || !eventoId) return null;
 
     const eventoDoc = await db.collection('eventos').doc(eventoId).get();
     if (!eventoDoc.exists) return null;
@@ -177,7 +179,12 @@ exports.limpiarMensajesAntiguos = functions.pubsub
       .get();
 
     for (const eventoDoc of eventosSnap.docs) {
-      const mensajesSnap = await eventoDoc.ref.collection('mensajes').get();
+      // El chat vive en la colección top-level 'mensajes' (campo eventoId),
+      // no en una subcolección del evento.
+      const mensajesSnap = await db
+        .collection('mensajes')
+        .where('eventoId', '==', eventoDoc.id)
+        .get();
       if (mensajesSnap.empty) continue;
 
       // Firestore batch tiene límite de 500 ops; se divide en bloques de 450
