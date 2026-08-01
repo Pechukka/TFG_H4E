@@ -603,16 +603,22 @@ class _AdminEventosScreenState extends State<AdminEventosScreen> {
 
     if (confirmar != true || !mounted) return;
 
-    await AdminService.eliminarEvento(
-      doc.id,
-      titulo: titulo,
-      trabajadoresIds: workerIds,
-    );
-
-    if (mounted) {
-      showTopSnackBar(
-          context, '${t.tr('ev_eliminado_pre')}$titulo${t.tr('ev_eliminado_post')}',
-          backgroundColor: AppTheme.fondoCard, icon: Icons.delete_outline);
+    try {
+      await AdminService.eliminarEvento(
+        doc.id,
+        titulo: titulo,
+        trabajadoresIds: workerIds,
+      );
+      if (mounted) {
+        showTopSnackBar(
+            context, '${t.tr('ev_eliminado_pre')}$titulo${t.tr('ev_eliminado_post')}',
+            backgroundColor: AppTheme.fondoCard, icon: Icons.delete_outline);
+      }
+    } catch (_) {
+      if (mounted) {
+        showTopSnackBar(context, t.tr('ev_err_eliminar'),
+            backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
+      }
     }
   }
 
@@ -822,13 +828,19 @@ class _AdminCrearEventoFormState extends State<_AdminCrearEventoForm> {
 
     if (confirmar != true || !mounted) return;
 
-    await AdminService.eliminarEvento(
-      widget.eventoExistente!.id,
-      titulo: titulo,
-      trabajadoresIds: workerIds,
-    );
-
-    if (mounted) widget.onVolver();
+    try {
+      await AdminService.eliminarEvento(
+        widget.eventoExistente!.id,
+        titulo: titulo,
+        trabajadoresIds: workerIds,
+      );
+      if (mounted) widget.onVolver();
+    } catch (_) {
+      if (mounted) {
+        showTopSnackBar(context, t.tr('ev_err_eliminar'),
+            backgroundColor: AppTheme.rojoError, icon: Icons.error_outline);
+      }
+    }
   }
 
   Future<void> _guardar() async {
