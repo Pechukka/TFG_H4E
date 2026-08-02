@@ -625,7 +625,8 @@ class AdminService {
       if (entradaTs is! Timestamp || salidaTs is! Timestamp) continue;
       final entrada = entradaTs.toDate();
       if (entrada.isBefore(inicioMes) || !entrada.isBefore(finMes)) continue;
-      horasMes += salidaTs.toDate().difference(entrada).inMinutes / 60.0;
+      // Horas NETAS (descontando pausas), coherente con la nómina y el panel de fichajes.
+      horasMes += Fichaje.horasNetas(data);
       final wid = data['trabajadorId'] as String? ?? '';
       if (wid.isNotEmpty) workersConHoras.add(wid);
     }
