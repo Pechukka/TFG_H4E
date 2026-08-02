@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fichaje.dart';
 import '../models/nomina.dart';
 import '../models/notificacion.dart';
+import '../models/postulacion.dart';
 import '../core/roles.dart';
 import '../core/constants.dart';
 
@@ -431,21 +432,29 @@ class AdminService {
 
     // 4. Borrar las postulaciones del evento (si no, quedan como entradas fantasma
     //    en "Mis postulaciones" del worker, que no puede resolver el evento ya borrado).
+    //    De paso se recogen los postulantes PENDIENTES para avisarles: los confirmados
+    //    ya vienen en trabajadoresIds.
     final postulaciones = await _firestore
         .collection(AppConstants.colPostulaciones)
         .where('eventoId', isEqualTo: eventoId)
         .get();
+    final avisar = <String>{...trabajadoresIds};
     for (final doc in postulaciones.docs) {
+      final data = doc.data();
+      if (data['estado'] == Postulacion.pendiente) {
+        final wid = data['trabajadorId'] as String? ?? '';
+        if (wid.isNotEmpty) avisar.add(wid);
+      }
       await doc.reference.delete();
     }
 
-    // 5. Notificar cancelación a los trabajadores asignados
-    for (final uid in trabajadoresIds) {
+    // 5. Notificar la cancelación a los afectados (confirmados + postulantes pendientes).
+    for (final uid in avisar) {
       await _notificar(
         uid,
         tipo: TipoNotificacion.eventoCancelado,
         titulo: 'Evento cancelado',
-        mensaje: titulo,
+        mensaje: 'El evento «$titulo» se ha cancelado',
         datos: {'tituloEvento': titulo},
       );
     }
