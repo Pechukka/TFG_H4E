@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/fichaje.dart';
 import '../models/nomina.dart';
 import '../models/notificacion.dart';
 import '../core/roles.dart';
@@ -220,7 +221,9 @@ class AdminService {
         final salida = (f['salida'] as Timestamp?)?.toDate();
         if (entrada == null || salida == null) continue;
 
-        final horas = salida.difference(entrada).inMinutes / 60.0;
+        // Horas NETAS (descontando pausas), para que la nómina coincida con el
+        // "Tiempo trabajado" que ve el worker y con la tabla de fichajes del admin.
+        final horas = Fichaje.horasNetas(f);
 
         // Preferir los snapshots grabados al eliminar el evento;
         // si el evento sigue activo, leerlo de Firestore como antes.

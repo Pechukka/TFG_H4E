@@ -46,6 +46,27 @@ class Fichaje {
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
+  // Horas trabajadas NETAS (entrada→salida menos las pausas) a partir de los datos
+  // crudos de Firestore. Fuente única para el panel admin y el cálculo de nóminas, para
+  // que ambos coincidan con el "Tiempo trabajado" que ve el worker (tiempoTotal).
+  // Devuelve 0 si el fichaje no está cerrado (falta entrada o salida).
+  static double horasNetas(Map<String, dynamic> data) {
+    final entrada = (data['entrada'] as Timestamp?)?.toDate();
+    final salida = (data['salida'] as Timestamp?)?.toDate();
+    if (entrada == null || salida == null) return 0;
+    var total = salida.difference(entrada);
+    for (final p in (data['pausas'] as List<dynamic>? ?? [])) {
+      final m = p as Map<String, dynamic>;
+      final ini = (m['inicio'] as Timestamp?)?.toDate();
+      if (ini == null) continue;
+      // Pausa sin fin (no debería pasar en un fichaje cerrado): se corta en la salida.
+      final fin = (m['fin'] as Timestamp?)?.toDate() ?? salida;
+      total -= fin.difference(ini);
+    }
+    // Nunca negativo (por si hubiera datos inconsistentes).
+    return total.isNegative ? 0 : total.inMinutes / 60.0;
+  }
+
   // Firebase → Dart
   factory Fichaje.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
