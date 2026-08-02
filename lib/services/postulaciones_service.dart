@@ -184,10 +184,12 @@ class PostulacionesService {
 
   // Fase 5C: el admin quita a un integrante del evento. Lo saca de
   // trabajadoresIds/Roles/Info y, si tenía postulación en este evento, la pasa a
-  // 'descartado'. Libera la plaza. Todo en un batch (atómico).
+  // 'descartado'. Libera la plaza. Avisa al worker con una notificación (que la Cloud
+  // Function convierte en push). Todo en un batch (atómico).
   static Future<void> quitarIntegrante({
     required String eventoId,
     required String trabajadorId,
+    required String tituloEvento,
   }) async {
     final eventoRef =
         _firestore.collection(AppConstants.colEventos).doc(eventoId);
@@ -212,6 +214,21 @@ class PostulacionesService {
     for (final d in delEvento) {
       batch.update(d.reference, {'estado': Postulacion.descartado});
     }
+
+    // Aviso al worker de que ya no está en el evento (mismo batch → atómico).
+    final titulo = tituloEvento.isEmpty ? 'el evento' : tituloEvento;
+    final notificacionRef =
+        _firestore.collection(AppConstants.colNotificaciones).doc();
+    batch.set(notificacionRef, {
+      'trabajadorId': trabajadorId,
+      'tipo': TipoNotificacion.cambioEvento.toString(),
+      'titulo': 'Ya no estás en el evento',
+      'mensaje': titulo,
+      'timestamp': FieldValue.serverTimestamp(),
+      'leida': false,
+      'datos': {'eventoId': eventoId, 'tituloEvento': titulo},
+    });
+
     await batch.commit();
   }
 

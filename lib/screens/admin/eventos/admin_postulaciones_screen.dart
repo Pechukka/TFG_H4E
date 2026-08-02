@@ -401,7 +401,9 @@ class _AdminPostulacionesScreenState extends State<AdminPostulacionesScreen> {
     if (ok != true) return;
     try {
       await PostulacionesService.quitarIntegrante(
-          eventoId: widget.eventoId, trabajadorId: uid);
+          eventoId: widget.eventoId,
+          trabajadorId: uid,
+          tituloEvento: widget.tituloEvento);
       if (mounted) {
         showTopSnackBar(context, t.tr('pl_quitado'),
             backgroundColor: AppTheme.textoTerciario, icon: Icons.person_remove);
