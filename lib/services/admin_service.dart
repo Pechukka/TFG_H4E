@@ -429,18 +429,28 @@ class AdminService {
       await doc.reference.delete();
     }
 
-    // 4. Notificar cancelación a los trabajadores asignados
+    // 4. Borrar las postulaciones del evento (si no, quedan como entradas fantasma
+    //    en "Mis postulaciones" del worker, que no puede resolver el evento ya borrado).
+    final postulaciones = await _firestore
+        .collection(AppConstants.colPostulaciones)
+        .where('eventoId', isEqualTo: eventoId)
+        .get();
+    for (final doc in postulaciones.docs) {
+      await doc.reference.delete();
+    }
+
+    // 5. Notificar cancelación a los trabajadores asignados
     for (final uid in trabajadoresIds) {
       await _notificar(
         uid,
         tipo: TipoNotificacion.eventoCancelado,
-        titulo: '¡ Evento cancelado',
+        titulo: 'Evento cancelado',
         mensaje: titulo,
         datos: {'tituloEvento': titulo},
       );
     }
 
-    // 5. Eliminar el documento del evento
+    // 6. Eliminar el documento del evento
     await _firestore.collection('eventos').doc(eventoId).delete();
   }
 
