@@ -115,7 +115,13 @@ exports.onNotificacionCreada = functions.firestore
 // cuando alguien envía un mensaje al chat (excepto el propio autor).
 // El chat NO es una subcolección: vive en la colección top-level 'mensajes',
 // con los campos `eventoId` y `remitenteId` (ver lib/models/mensaje.dart).
-exports.onMensajeCreado = functions.firestore
+//
+// La región se fija en europe-west1 porque la base de datos de Firestore está en
+// eur3 (Europa): un trigger de Firestore gen1 debe desplegarse en la región de la
+// base de datos, o el deploy falla con conflicto de región (us-central1 ≠ eur3).
+exports.onMensajeCreado = functions
+  .region('europe-west1')
+  .firestore
   .document('mensajes/{mensajeId}')
   .onCreate(async (snap) => {
     const mensaje = snap.data();
