@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/fichaje.dart';
 import '../models/nomina.dart';
 import '../models/notificacion.dart';
 import '../core/roles.dart';
@@ -220,7 +221,9 @@ class AdminService {
         final salida = (f['salida'] as Timestamp?)?.toDate();
         if (entrada == null || salida == null) continue;
 
-        final horas = salida.difference(entrada).inMinutes / 60.0;
+        // Horas NETAS (descontando pausas), para que la nómina coincida con el
+        // "Tiempo trabajado" que ve el worker y con la tabla de fichajes del admin.
+        final horas = Fichaje.horasNetas(f);
 
         // Preferir los snapshots grabados al eliminar el evento;
         // si el evento sigue activo, leerlo de Firestore como antes.
@@ -426,18 +429,28 @@ class AdminService {
       await doc.reference.delete();
     }
 
-    // 4. Notificar cancelación a los trabajadores asignados
+    // 4. Borrar las postulaciones del evento (si no, quedan como entradas fantasma
+    //    en "Mis postulaciones" del worker, que no puede resolver el evento ya borrado).
+    final postulaciones = await _firestore
+        .collection(AppConstants.colPostulaciones)
+        .where('eventoId', isEqualTo: eventoId)
+        .get();
+    for (final doc in postulaciones.docs) {
+      await doc.reference.delete();
+    }
+
+    // 5. Notificar cancelación a los trabajadores asignados
     for (final uid in trabajadoresIds) {
       await _notificar(
         uid,
         tipo: TipoNotificacion.eventoCancelado,
-        titulo: '¡ Evento cancelado',
+        titulo: 'Evento cancelado',
         mensaje: titulo,
         datos: {'tituloEvento': titulo},
       );
     }
 
-    // 5. Eliminar el documento del evento
+    // 6. Eliminar el documento del evento
     await _firestore.collection('eventos').doc(eventoId).delete();
   }
 
@@ -612,7 +625,8 @@ class AdminService {
       if (entradaTs is! Timestamp || salidaTs is! Timestamp) continue;
       final entrada = entradaTs.toDate();
       if (entrada.isBefore(inicioMes) || !entrada.isBefore(finMes)) continue;
-      horasMes += salidaTs.toDate().difference(entrada).inMinutes / 60.0;
+      // Horas NETAS (descontando pausas), coherente con la nómina y el panel de fichajes.
+      horasMes += Fichaje.horasNetas(data);
       final wid = data['trabajadorId'] as String? ?? '';
       if (wid.isNotEmpty) workersConHoras.add(wid);
     }

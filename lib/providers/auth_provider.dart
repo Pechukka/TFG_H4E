@@ -64,6 +64,22 @@ class AuthProvider with ChangeNotifier {
     _userDocSub?.cancel();
     _userDocSub = null;
     _setLoading(true);
+
+    // Limpiar el token FCM del usuario que sale. Si no, en un móvil compartido los
+    // push destinados al usuario anterior seguirían llegando al siguiente que inicie
+    // sesión en este dispositivo (la Cloud Function envía al fcmToken guardado).
+    final uid = _currentUser?.id;
+    if (!kIsWeb && uid != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .update({'fcmToken': FieldValue.delete()});
+      } catch (_) {
+        // No crítico: el logout continúa aunque falle (p. ej. doc ya borrado).
+      }
+    }
+
     await _authService.logout();
     _currentUser = null;
     _setLoading(false);

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:hands4events/core/theme.dart';
+import '../../../models/fichaje.dart';
 import '../../../providers/idioma_provider.dart';
 import '../../../services/admin_service.dart';
 
@@ -201,7 +202,8 @@ class _AdminFichajesEventoScreenState
       if (salida != null) {
         final dtSalida = (salida as dynamic).toDate() as DateTime;
         horaSalida = _hora(dtSalida);
-        horasTotales = dtSalida.difference(dt).inMinutes / 60.0;
+        // Horas NETAS (descuenta pausas), igual que el "Tiempo trabajado" del worker.
+        horasTotales = Fichaje.horasNetas(f);
       }
     }
 

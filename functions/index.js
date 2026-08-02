@@ -18,7 +18,10 @@ exports.onWorkerDeleted = functions.firestore
       console.error('Error al eliminar usuario Auth', uid, ':', e.message);
     }
 
-    // Quitar al trabajador de los eventos en los que estaba asignado
+    // Quitar al trabajador de los eventos en los que estaba asignado. Se limpian TODAS
+    // las denormalizaciones para no dejar huérfanos: trabajadoresIds, trabajadoresRoles,
+    // trabajadoresInfo (equipo que ve el worker) y su ficha en la subcolección `equipo`
+    // (que contiene el teléfono).
     const eventosSnap = await db.collection('eventos')
       .where('trabajadoresIds', 'array-contains', uid)
       .get();
@@ -30,10 +33,29 @@ exports.onWorkerDeleted = functions.firestore
         const ids = (data.trabajadoresIds || []).filter(id => id !== uid);
         const roles = Object.assign({}, data.trabajadoresRoles || {});
         delete roles[uid];
-        batch.update(eventoDoc.ref, { trabajadoresIds: ids, trabajadoresRoles: roles });
+        const info = Object.assign({}, data.trabajadoresInfo || {});
+        delete info[uid];
+        batch.update(eventoDoc.ref, {
+          trabajadoresIds: ids,
+          trabajadoresRoles: roles,
+          trabajadoresInfo: info,
+        });
+        batch.delete(eventoDoc.ref.collection('equipo').doc(uid));
       }
       await batch.commit();
       console.log('Trabajador', uid, 'eliminado de', eventosSnap.size, 'eventos');
+    }
+
+    // Borrar sus postulaciones (pendientes/confirmadas/rechazadas) para que no queden
+    // colgando en el panel del admin ni en el feed.
+    const postSnap = await db.collection('postulaciones')
+      .where('trabajadorId', '==', uid)
+      .get();
+    if (!postSnap.empty) {
+      const batch = db.batch();
+      postSnap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      console.log('Borradas', postSnap.size, 'postulaciones de', uid);
     }
 
     return null;

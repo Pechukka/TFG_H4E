@@ -97,17 +97,21 @@ class ChatService {
     });
   }
 
+  // Se consulta solo por eventoId (filtro de campo único) y se descarta en Dart lo que
+  // no toca: combinar el != de remitenteId con los == de leido exigiría índice compuesto
+  // (y, además, podría lanzar en cada apertura de chat). Sigue el patrón del proyecto.
   Future<void> marcarMensajesLeidos(String eventoId, String userId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colMensajes)
         .where('eventoId', isEqualTo: eventoId)
-        .where('remitenteId', isNotEqualTo: userId)
-        .where('leido', isEqualTo: false)
         .get();
 
     final batch = _firestore.batch();
-    for (var doc in snapshot.docs) {
-      batch.update(doc.reference, {'leido': true});
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      if (data['remitenteId'] != userId && (data['leido'] ?? false) == false) {
+        batch.update(doc.reference, {'leido': true});
+      }
     }
     await batch.commit();
   }
@@ -116,10 +120,11 @@ class ChatService {
     final snapshot = await _firestore
         .collection(AppConstants.colMensajes)
         .where('eventoId', isEqualTo: eventoId)
-        .where('remitenteId', isNotEqualTo: userId)
-        .where('leido', isEqualTo: false)
         .get();
-    return snapshot.docs.length;
+    return snapshot.docs.where((doc) {
+      final data = doc.data();
+      return data['remitenteId'] != userId && (data['leido'] ?? false) == false;
+    }).length;
   }
 
   Future<void> eliminarMensaje(String mensajeId) async {
